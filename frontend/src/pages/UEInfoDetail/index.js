@@ -3,6 +3,7 @@ import {withRouter} from "react-router-dom";
 import {connect} from "react-redux";
 import {Table} from "react-bootstrap";
 import ApiHelper from "../../util/ApiHelper";
+import UEInfoApiHelper from "../../util/UEInfoApiHelper";
 
 class UEInfoDetail extends Component {
 
@@ -14,6 +15,9 @@ class UEInfoDetail extends Component {
         this.getSMFInfo = this.getSMFInfo.bind(this)
         this.getPCFInfo = this.getPCFInfo.bind(this)
 
+        this.state = {
+            randomVal : 10
+        }
     }
 
     async deleteSubscriber(subscriber) {
@@ -38,13 +42,6 @@ class UEInfoDetail extends Component {
         if (!result) {
           alert("Error modify subscriber: " + subscriber.subscriberData);
         }
-      }
-
-      componentDidMount() {
-
-        // console.log("In UEInfoDetail")
-        // console.log("In componentDidMount")
-
       }
 
     getAMFUEContexts() {
@@ -171,6 +168,17 @@ class UEInfoDetail extends Component {
 
     }
 
+    getNumber() {
+        var Arr = []
+        Arr.push(
+            <tr>
+                <td>Value</td>
+                <td>{this.state.randomVal}</td>
+            </tr>
+        )
+        return Arr;
+    }
+
     render() {
         return (
                 <div className="container-fluid">
@@ -219,11 +227,42 @@ class UEInfoDetail extends Component {
                                     <p>&nbsp;</p><p>&nbsp;</p>
                                     <p>&nbsp;</p><p>&nbsp;</p>
                             </div>
+                            <div className="card">
+                                <div className="header subscribers__header">
+                                    <h4>{`UE bill [SUPI:${this.props.amfInfo.Supi}]`}</h4>
+                                </div>
+                                <div className="content subscribers__content">
+                                    <Table className="subscribers__table" striped bordered condensed hover>
+                                    <thead>
+                                    <tr>
+                                        <th colSpan={1}>Information Entity</th>
+                                        <th colSpan={2}>Value</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        {this.getNumber()}
+                                    </tbody>
+                                    </Table>
+                                </div>
+                                    <p>&nbsp;</p><p>&nbsp;</p>
+                                    <p>&nbsp;</p><p>&nbsp;</p>
+                                    <p>&nbsp;</p><p>&nbsp;</p>
+                            </div>
                         </div>
                     </div>
                 </div>
         );
     }
+
+    componentDidMount() {
+        setInterval( async () => {
+            let randval = await UEInfoApiHelper.fetchUEInfoDetailRandomNumber();
+
+            this.setState({
+                randomVal: randval
+            })
+        },1000)
+      }
 
 }
 

@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -1325,4 +1326,13 @@ func GetUEPDUSessionInfo(c *gin.Context) {
 			"cause": "No SMF Found",
 		})
 	}
+}
+
+func GetRandomNumber(c *gin.Context) {
+	setCorsHeader(c)
+
+	logger.WebUILog.Infoln("Get Random Number")
+	c.JSON(http.StatusOK, gin.H{
+		"RandomValue": (rand.Intn(100)),
+	})
 }

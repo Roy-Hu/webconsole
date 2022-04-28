@@ -206,4 +206,11 @@ var routes = Routes{
 		"/ue-pdu-session-info/:smContextRef",
 		GetUEPDUSessionInfo,
 	},
+
+	{
+		"Random Number",
+		http.MethodGet,
+		"/random-number",
+		GetRandomNumber,
+	},
 }
