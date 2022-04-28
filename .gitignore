@@ -28,3 +28,6 @@ cscope.*
 # Debug
 *.log
 *.pcap
+
+# Yarn
+*.lock
