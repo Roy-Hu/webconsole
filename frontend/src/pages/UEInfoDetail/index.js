@@ -16,7 +16,10 @@ class UEInfoDetail extends Component {
         this.getPCFInfo = this.getPCFInfo.bind(this)
 
         this.state = {
-            randomVal : 10
+            randomVal : 10,
+            DataTotalVolume: 10,
+            DataVolumeDownlink: 10,
+            DataVolumeUplink: 10
         }
     }
 
@@ -176,6 +179,30 @@ class UEInfoDetail extends Component {
                 <td>{this.state.randomVal}</td>
             </tr>
         )
+
+        return Arr;
+    }
+
+    getChargingRecord() {
+        var Arr = []
+        Arr.push(
+            <tr>
+                <td>DataTotalVolume</td>
+                <td>{this.state.DataTotalVolume}</td>
+            </tr>
+        )
+        Arr.push(
+            <tr>
+                <td>DataVolumeDownlink</td>
+                <td>{this.state.DataVolumeDownlink}</td>
+            </tr>
+        )
+        Arr.push(
+            <tr>
+                <td>DataVolumeUplink</td>
+                <td>{this.state.DataVolumeUplink}</td>
+            </tr>
+        )
         return Arr;
     }
 
@@ -248,6 +275,27 @@ class UEInfoDetail extends Component {
                                     <p>&nbsp;</p><p>&nbsp;</p>
                                     <p>&nbsp;</p><p>&nbsp;</p>
                             </div>
+                            <div className="card">
+                                <div className="header subscribers__header">
+                                    <h4>{`Charging Record [SUPI:${this.props.amfInfo.Supi}]`}</h4>
+                                </div>
+                                <div className="content subscribers__content">
+                                    <Table className="subscribers__table" striped bordered condensed hover>
+                                    <thead>
+                                    <tr>
+                                        <th colSpan={1}>Information Entity</th>
+                                        <th colSpan={2}>Value</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        {this.getChargingRecord()}
+                                    </tbody>
+                                    </Table>
+                                </div>
+                                    <p>&nbsp;</p><p>&nbsp;</p>
+                                    <p>&nbsp;</p><p>&nbsp;</p>
+                                    <p>&nbsp;</p><p>&nbsp;</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -262,7 +310,17 @@ class UEInfoDetail extends Component {
                 randomVal: randval
             })
         },1000)
-      }
+
+        setInterval( async () => {
+            let charginrecord = await UEInfoApiHelper.fetchUEInfoDetailChargingRecord();
+
+            this.setState({
+                DataTotalVolume: charginrecord.DataTotalVolume,
+                DataVolumeDownlink: charginrecord.DataVolumeDownlink,
+                DataVolumeUplink: charginrecord.DataVolumeUplink
+            })
+        },1000)
+    }
 
 }
 

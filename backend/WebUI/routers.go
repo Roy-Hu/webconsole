@@ -213,4 +213,11 @@ var routes = Routes{
 		"/random-number",
 		GetRandomNumber,
 	},
+
+	{
+		"Charging Record",
+		http.MethodGet,
+		"/charging-record",
+		GetChargingRecord,
+	},
 }

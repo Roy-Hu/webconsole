@@ -22,6 +22,8 @@ import (
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/logger"
 	"github.com/free5gc/webconsole/backend/webui_context"
+	"github.com/free5gc/CDRUtil/asn"
+	"github.com/free5gc/CDRUtil/cdrType"
 )
 
 const (
@@ -1334,5 +1336,62 @@ func GetRandomNumber(c *gin.Context) {
 	logger.WebUILog.Infoln("Get Random Number")
 	c.JSON(http.StatusOK, gin.H{
 		"RandomValue": (rand.Intn(100)),
+	})
+}
+
+func recvChargingRecord() (total_cnt int64, ul_cnt int64, dl_cnt int64) {
+	// test data
+	cr := cdrType.ChargingRecord{
+		SubscriberIdentifier: &cdrType.SubscriptionID{SubscriptionIDData: "123"},
+		ListOfMultipleUnitUsage: []cdrType.MultipleUnitUsage{
+			cdrType.MultipleUnitUsage {
+				UsedUnitContainers: []cdrType.UsedUnitContainer {
+					cdrType.UsedUnitContainer {
+						DataTotalVolume: &cdrType.DataVolumeOctets{10},
+						DataVolumeUplink: &cdrType.DataVolumeOctets{6},
+						DataVolumeDownlink: &cdrType.DataVolumeOctets{4},
+					},
+					cdrType.UsedUnitContainer {
+						DataTotalVolume: &cdrType.DataVolumeOctets{1},
+						DataVolumeUplink: &cdrType.DataVolumeOctets{2},
+						DataVolumeDownlink: &cdrType.DataVolumeOctets{3},
+					},
+				},
+			},
+		},
+	}
+
+	recv, _ := asn.BerMarshalWithParams(cr, "")
+
+	val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
+	asn.UnmarshalWithParams(recv, val, "")
+
+	// ueid: reflect.ValueOf(val).Elem().Field(2).Elem().Field(1)
+
+	listOfMultipleUnitUsage := reflect.ValueOf(val).Elem().Field(5)
+	lenMultipleUnitUsage := listOfMultipleUnitUsage.Len()
+	
+	for i := 0; i < lenMultipleUnitUsage; i++ {
+		usedUnitContainers := listOfMultipleUnitUsage.Index(i).Field(1)
+
+		for j := 0; j < usedUnitContainers.Len(); j++ {
+			usedUnitContainer := usedUnitContainers.Index(j)
+			total_cnt += usedUnitContainer.Field(4).Elem().Field(0).Int()
+			ul_cnt += usedUnitContainer.Field(5).Elem().Field(0).Int()
+			dl_cnt += usedUnitContainer.Field(6).Elem().Field(0).Int()
+		}
+	}
+	return total_cnt, ul_cnt, dl_cnt
+}
+
+func GetChargingRecord(c *gin.Context) {
+	setCorsHeader(c)
+
+	logger.WebUILog.Infoln("Get Charging Record")
+	total_cnt, ul_cnt, dl_cnt := recvChargingRecord()
+	c.JSON(http.StatusOK, gin.H{
+		"DataTotalVolume": total_cnt,
+		"DataVolumeUplink": ul_cnt,
+		"DataVolumeDownlink": dl_cnt,
 	})
 }

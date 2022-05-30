@@ -137,6 +137,31 @@ class UeInfoApiHelper {
 
     return 0;
   }
+
+  static async fetchUEInfoDetailChargingRecord() {
+    try {
+      let url = `charging-record`
+      // console.log("Making request to ", url, " ....")
+
+      let response = await Http.get(url);
+      if (response.status === 200 && response.data) {    
+        // console.log(response.data.RandomValue)   
+        // let ue_context = response.data[0]
+        // store.dispatch(ueinfoActions.setUEInfoDetailAMF(ue_context));
+
+        // let smContextRef = ue_context.PduSessions[0].SmContextRef
+
+        return response.data;
+      } else {
+        console.log("Request failed, url:", url)
+        console.log("Response: ", response.status, response.data)
+      }
+    } catch (error) {
+        console.log(error)
+    }
+
+    return 0;
+  }
 }
 
 export default UeInfoApiHelper;
