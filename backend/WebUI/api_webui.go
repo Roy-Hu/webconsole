@@ -1342,7 +1342,7 @@ func GetRandomNumber(c *gin.Context) {
 func recvChargingRecord() (total_cnt int64, ul_cnt int64, dl_cnt int64) {
 	// test data
 	cr := cdrType.ChargingRecord{
-		SubscriberIdentifier: &cdrType.SubscriptionID{SubscriptionIDData: "123"},
+		SubscriberIdentifier: &cdrType.SubscriptionID{SubscriptionIDData: "imsi-2089300007487"},
 		ListOfMultipleUnitUsage: []cdrType.MultipleUnitUsage{
 			cdrType.MultipleUnitUsage {
 				UsedUnitContainers: []cdrType.UsedUnitContainer {
@@ -1366,21 +1366,16 @@ func recvChargingRecord() (total_cnt int64, ul_cnt int64, dl_cnt int64) {
 	val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
 	asn.UnmarshalWithParams(recv, val, "")
 
-	// ueid: reflect.ValueOf(val).Elem().Field(2).Elem().Field(1)
-
-	listOfMultipleUnitUsage := reflect.ValueOf(val).Elem().Field(5)
-	lenMultipleUnitUsage := listOfMultipleUnitUsage.Len()
+	chargingRecord := *(val.(*cdrType.ChargingRecord))
 	
-	for i := 0; i < lenMultipleUnitUsage; i++ {
-		usedUnitContainers := listOfMultipleUnitUsage.Index(i).Field(1)
-
-		for j := 0; j < usedUnitContainers.Len(); j++ {
-			usedUnitContainer := usedUnitContainers.Index(j)
-			total_cnt += usedUnitContainer.Field(4).Elem().Field(0).Int()
-			ul_cnt += usedUnitContainer.Field(5).Elem().Field(0).Int()
-			dl_cnt += usedUnitContainer.Field(6).Elem().Field(0).Int()
+	for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
+		for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
+			total_cnt += usedUnitContainer.DataTotalVolume.Value
+			ul_cnt += usedUnitContainer.DataVolumeUplink.Value
+			dl_cnt += usedUnitContainer.DataVolumeDownlink.Value
 		}
 	}
+
 	return total_cnt, ul_cnt, dl_cnt
 }
 
