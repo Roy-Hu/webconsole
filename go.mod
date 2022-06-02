@@ -18,4 +18,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	github.com/free5gc/CDRUtil v0.0.0
 )
-replace github.com/free5gc/CDRUtil v0.0.0 => /home/uduck/go/src/CDRUtil
+replace github.com/free5gc/CDRUtil v0.0.0 => /home/uduck/go/src/github.com/free5gc/CDRUtil

@@ -217,7 +217,7 @@ var routes = Routes{
 	{
 		"Charging Record",
 		http.MethodGet,
-		"/charging-record",
+		"/charging-record/:supi",
 		GetChargingRecord,
 	},
 }

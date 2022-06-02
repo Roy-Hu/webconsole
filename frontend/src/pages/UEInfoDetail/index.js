@@ -312,7 +312,7 @@ class UEInfoDetail extends Component {
         },1000)
 
         setInterval( async () => {
-            let charginrecord = await UEInfoApiHelper.fetchUEInfoDetailChargingRecord();
+            let charginrecord = await UEInfoApiHelper.fetchUEInfoDetailChargingRecord(this.props.amfInfo.Supi);
 
             this.setState({
                 DataTotalVolume: charginrecord.DataTotalVolume,

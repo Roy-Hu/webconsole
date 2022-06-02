@@ -138,9 +138,9 @@ class UeInfoApiHelper {
     return 0;
   }
 
-  static async fetchUEInfoDetailChargingRecord() {
+  static async fetchUEInfoDetailChargingRecord(supi) {
     try {
-      let url = `charging-record`
+      let url = `charging-record/${supi}`
       // console.log("Making request to ", url, " ....")
 
       let response = await Http.get(url);

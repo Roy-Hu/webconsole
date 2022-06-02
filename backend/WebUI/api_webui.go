@@ -24,6 +24,7 @@ import (
 	"github.com/free5gc/webconsole/backend/webui_context"
 	"github.com/free5gc/CDRUtil/asn"
 	"github.com/free5gc/CDRUtil/cdrType"
+	"github.com/free5gc/CDRUtil/cdrFile"
 )
 
 const (
@@ -1339,32 +1340,20 @@ func GetRandomNumber(c *gin.Context) {
 	})
 }
 
-func recvChargingRecord() (total_cnt int64, ul_cnt int64, dl_cnt int64) {
-	// test data
-	cr := cdrType.ChargingRecord{
-		SubscriberIdentifier: &cdrType.SubscriptionID{SubscriptionIDData: "imsi-2089300007487"},
-		ListOfMultipleUnitUsage: []cdrType.MultipleUnitUsage{
-			cdrType.MultipleUnitUsage {
-				UsedUnitContainers: []cdrType.UsedUnitContainer {
-					cdrType.UsedUnitContainer {
-						DataTotalVolume: &cdrType.DataVolumeOctets{10},
-						DataVolumeUplink: &cdrType.DataVolumeOctets{6},
-						DataVolumeDownlink: &cdrType.DataVolumeOctets{4},
-					},
-					cdrType.UsedUnitContainer {
-						DataTotalVolume: &cdrType.DataVolumeOctets{1},
-						DataVolumeUplink: &cdrType.DataVolumeOctets{2},
-						DataVolumeDownlink: &cdrType.DataVolumeOctets{3},
-					},
-				},
-			},
-		},
-	}
+func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int64) {
+	fileDir := "/tmp/"
 
-	recv, _ := asn.BerMarshalWithParams(cr, "")
+	fileName := fileDir + supi + ".cdr"
+	fmt.Println("supi", supi)
+	newCdrFile := cdrFile.CDRFile{}
+
+	newCdrFile.Decoding(fileName)
+
+	recvByte := newCdrFile.CdrList[0].CdrByte
+
 
 	val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
-	asn.UnmarshalWithParams(recv, val, "")
+	asn.UnmarshalWithParams(recvByte, val, "")
 
 	chargingRecord := *(val.(*cdrType.ChargingRecord))
 	
@@ -1383,7 +1372,10 @@ func GetChargingRecord(c *gin.Context) {
 	setCorsHeader(c)
 
 	logger.WebUILog.Infoln("Get Charging Record")
-	total_cnt, ul_cnt, dl_cnt := recvChargingRecord()
+
+	supi, _ := c.Params.Get("supi")
+
+	total_cnt, ul_cnt, dl_cnt := recvChargingRecord(supi)
 	c.JSON(http.StatusOK, gin.H{
 		"DataTotalVolume": total_cnt,
 		"DataVolumeUplink": ul_cnt,
