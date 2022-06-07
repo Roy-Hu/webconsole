@@ -74,6 +74,10 @@ class UECharginRecord extends Component  {
     });
   }
 
+  refreshTable() {
+    UEInfoApiHelper.fetchUEWithCR().then();
+  }
+
   cellButton(cell, row, enumObject, rowIndex) {
     return (
         <DetailButton cell={cell} row={row} rowIndex={rowIndex} />
@@ -100,6 +104,10 @@ class UECharginRecord extends Component  {
         <div className="container-fluid">
           <div className="dashboard__title">
                 <h2>Real Time Status with Charging Record</h2>
+                <Button bsStyle={"primary"} className="subscribers__button"
+                        onClick={this.refreshTable.bind(this)}>
+                  Refresh
+                </Button>
           </div>
           <div className="row">
             <div className="col-12">
