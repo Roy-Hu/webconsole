@@ -5,6 +5,8 @@ export default class ueinfoActions {
   static SET_UE_DETAIL_SMF = 'UEINFO/SET_UE_DETAIL_SMF'
   static SET_REG_UE_ERR = 'UEINFO/SET_REG_UE_ERR';
   static SET_UE_DETAIL_SM_CTX_REF = 'UEINFO/SET_UE_DETAIL_SM_CTX_REF'
+  static SET_UE_CR = 'UEINFO/SET_UE_CR'
+  static SET_UE_CR_ERR = 'UEINFO/SET_UE_CR_ERR'
 
   static setRegisteredUE(users) {
     return {
@@ -54,6 +56,21 @@ export default class ueinfoActions {
       type: this.SET_REG_UE_ERR,
       get_registered_ue_err: false,
       registered_ue_err_msg: ''
+    };
+  }
+
+  static setUECR(users) {
+    return {
+      type: this.SET_UE_CR,
+      users_cr: users,
+    };
+  }
+
+  static setUECRError(errMsg) {
+    return {
+      type: this.SET_UE_CR_ERR,
+      get_ue_cr_err: true,
+      ue_cr_err_msg: errMsg
     };
   }
 
