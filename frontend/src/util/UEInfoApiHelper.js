@@ -179,9 +179,18 @@ class UeInfoApiHelper {
           registered_users = response.data.map(ue_context =>
             new UEInfoWithCR(ue_context.Supi, ue_context.CmState)
             );
-          console.log("registered_users:", registered_users)
-            // let charginrecord = await this.fetchUEInfoDetailChargingRecord(registered_users.Supi);
 
+
+          // registered_users.forEach(function(item, i) {
+          for (let i = 0; i < registered_users.length; i++) {
+            const item = registered_users[i];
+            let charginrecord = await this.fetchUEInfoDetailChargingRecord(item.supi);
+            // console.log("charginrecord", charginrecord)
+            registered_users[i].totalVol = charginrecord.DataTotalVolume
+            registered_users[i].ulVol = charginrecord.DataVolumeUplink
+            registered_users[i].dlVol = charginrecord.DataVolumeDownlink
+          };
+          // console.log("registered_users:", registered_users)
           // totalVoltotalVol charginrecord.DataTotalVolume, 
           //   charginrecord.DataVolumeUplink, 
           //   charginrecord.DataVolumeDownlink
