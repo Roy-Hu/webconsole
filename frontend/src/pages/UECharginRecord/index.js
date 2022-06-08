@@ -115,10 +115,10 @@ class UECharginRecord extends Component  {
                 <BootstrapTable data={this.props.users_cr} striped={true} hover={true} /*trStyle={this.rowStyleFormat.bind(this)}*/>
                   <TableHeaderColumn dataField="supi" width='25%' isKey={true} dataAlign="center" dataSort={true}>SUPI</TableHeaderColumn>
                   <TableHeaderColumn dataField="status" width='10%' dataSort={true}>Status</TableHeaderColumn>
-                  <TableHeaderColumn dataField="supi" width='9%' dataFormat={this.cellButton.bind(this)}>Details</TableHeaderColumn>
-                  <TableHeaderColumn dataField="totalVol" width='18%' dataSort={true}>Data Total Volume &#40;Bytes&#41; </TableHeaderColumn>
-                  <TableHeaderColumn dataField="ulVol" width='18%' dataSort={true}>Data Volume Uplink &#40;Bytes&#41;</TableHeaderColumn>
-                  <TableHeaderColumn dataField="dlVol" width='18%' dataSort={true}>Data Volume Downlink &#40;Bytes&#41;</TableHeaderColumn>
+                  <TableHeaderColumn dataField="supi" width='8%' dataFormat={this.cellButton.bind(this)}>Details</TableHeaderColumn>
+                  <TableHeaderColumn dataField="totalVol" width='19%' dataSort={true}>Data Total Volume &#40;Bytes&#41; </TableHeaderColumn>
+                  <TableHeaderColumn dataField="ulVol" width='19%' dataSort={true}>Data Volume Uplink &#40;Bytes&#41;</TableHeaderColumn>
+                  <TableHeaderColumn dataField="dlVol" width='19%' dataSort={true}>Data Volume Downlink &#40;Bytes&#41;</TableHeaderColumn>
                 </BootstrapTable>
               }
             </div>
