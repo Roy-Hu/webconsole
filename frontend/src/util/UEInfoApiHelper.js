@@ -146,11 +146,9 @@ class UeInfoApiHelper {
 
       let response = await Http.get(url);
       if (response.status === 200 && response.data) {    
-        // console.log(response.data.RandomValue)   
-        // let ue_context = response.data[0]
-        // store.dispatch(ueinfoActions.setUEInfoDetailAMF(ue_context));
-
-        // let smContextRef = ue_context.PduSessions[0].SmContextRef
+        response.data.DataTotalVolume = (response.data.DataTotalVolume/1000).toFixed(1);
+        response.data.DataVolumeDownlink = (response.data.DataVolumeDownlink/1000).toFixed(1);
+        response.data.DataVolumeUplink = (response.data.DataVolumeUplink/1000).toFixed(1);
 
         return response.data;
       } else {

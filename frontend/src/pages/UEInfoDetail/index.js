@@ -284,7 +284,7 @@ class UEInfoDetail extends Component {
                                     <thead>
                                     <tr>
                                         <th colSpan={1}>Information Entity</th>
-                                        <th colSpan={2}>Value &#40;Bytes&#41;</th>
+                                        <th colSpan={2}>Value &#40;KB&#41;</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -319,7 +319,7 @@ class UEInfoDetail extends Component {
                 DataVolumeDownlink: charginrecord.DataVolumeDownlink,
                 DataVolumeUplink: charginrecord.DataVolumeUplink
             })
-        },10000)
+        },5000)
     }
 
 }
