@@ -73,6 +73,15 @@ class UECharginRecord extends Component  {
       // console.log("After fetchRegisteredUE")
       // console.log(this.props.get_registered_ue_err)
     });
+
+    this.interval = setInterval(
+        async () => {
+          await UEInfoApiHelper.fetchUEWithCR();
+        },3000);
+    }
+
+  componentWillUnmount() {
+    clearInterval(this.interval);
   }
 
   refreshTable() {

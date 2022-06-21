@@ -311,7 +311,7 @@ class UEInfoDetail extends Component {
             })
         },1000)
 
-        setInterval( async () => {
+        this.interval = setInterval( async () => {
             let charginrecord = await UEInfoApiHelper.fetchUEInfoDetailChargingRecord(this.props.amfInfo.Supi);
 
             this.setState({
@@ -319,9 +319,12 @@ class UEInfoDetail extends Component {
                 DataVolumeDownlink: charginrecord.DataVolumeDownlink,
                 DataVolumeUplink: charginrecord.DataVolumeUplink
             })
-        },5000)
+        },3000)
     }
 
+    componentWillUnmount() {
+        clearInterval(this.interval);
+    }
 }
 
 const mapStateToProps = state => ({
