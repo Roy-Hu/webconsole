@@ -4,6 +4,7 @@ import {Link, withRouter} from "react-router-dom";
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 import {connect} from "react-redux";
 import UEInfoApiHelper from "../../util/UEInfoApiHelper"
+// import Pagination from "react-bootstrap/Pagination";
 // import paginationFactory from 'react-bootstrap-table2-paginator';
 
 // eslint-disable-next-line no-unused-vars
@@ -122,7 +123,7 @@ class UECharginRecord extends Component  {
           <div className="row">
             <div className="col-12">
               { !this.props.get_ue_cr_err &&
-                <BootstrapTable data={this.props.users_cr} striped={true} hover={true} /*pagination={ paginationFactory() }/*trStyle={this.rowStyleFormat.bind(this)}*/ >
+                <BootstrapTable data={this.props.users_cr} striped={true} hover={true} pagination={true}/*pagination={ paginationFactory() }/*trStyle={this.rowStyleFormat.bind(this)}*/ >
                   <TableHeaderColumn dataField="supi" width='25%' isKey={true} dataAlign="center" dataSort={true}>SUPI</TableHeaderColumn>
                   <TableHeaderColumn dataField="status" width='10%' dataSort={true}>Status</TableHeaderColumn>
                   <TableHeaderColumn dataField="supi" width='8%' dataFormat={this.cellButton.bind(this)}>Details</TableHeaderColumn>
