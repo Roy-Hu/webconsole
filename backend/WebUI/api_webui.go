@@ -4,12 +4,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
 	"time"
-	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -18,13 +18,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/free5gc/CDRUtil/asn"
+	"github.com/free5gc/CDRUtil/cdrFile"
+	"github.com/free5gc/CDRUtil/cdrType"
 	"github.com/free5gc/openapi/models"
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/logger"
 	"github.com/free5gc/webconsole/backend/webui_context"
-	"github.com/free5gc/CDRUtil/asn"
-	"github.com/free5gc/CDRUtil/cdrType"
-	"github.com/free5gc/CDRUtil/cdrFile"
 )
 
 const (
@@ -37,6 +37,7 @@ const (
 	flowRuleDataColl = "policyData.ues.flowRule"
 	userDataColl     = "userData"
 	tenantDataColl   = "tenantData"
+	quotaDataColl    = "quotaData"
 )
 
 var httpsClient *http.Client
@@ -1250,6 +1251,60 @@ func DeleteSubscriberByID(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
+var db_quota = int32(100)
+
+func GetQuota(c *gin.Context) {
+	setCorsHeader(c)
+
+	fmt.Println("Get Quota")
+
+	var quotaData QuotaData
+	filter := bson.M{"id": 1}
+
+	authSubsDataInterface, err := mongoapi.RestfulAPIGetOne(quotaDataColl, filter)
+	if err != nil {
+		logger.WebUILog.Errorf("GetQuota err: %+v", err)
+	}
+
+	// var authSubsData models.AuthenticationSubscription
+	json.Unmarshal(mapToByte(authSubsDataInterface), &quotaData)
+
+
+	// quotaData := QuotaData{Quota: db_quota}
+
+	c.JSON(http.StatusOK, quotaData)
+}
+
+func PutQuota(c *gin.Context) {
+	setCorsHeader(c)
+	logger.WebUILog.Infoln("Put One Quota Data")
+
+	var quotaData QuotaData
+
+	if err := c.ShouldBindJSON(&quotaData); err != nil {
+		logger.WebUILog.Errorf("PutQuota err: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"cause": "JSON format incorrect",
+		})
+		return
+	}
+
+	filter := bson.M{"id": 1}
+
+	// quotaBsonM := toBsonM(quotaData.Quota)
+
+	quotaDataBsonM := bson.M{"id": 1, "quota": quotaData.Quota}
+
+	// fmt.Println("quotaData.Quota", quotaData.Quota)
+	// db_quota = quotaData.Quota
+
+	if _, err := mongoapi.RestfulAPIPutOne(quotaDataColl, filter, quotaDataBsonM); err != nil {
+		logger.WebUILog.Errorf("PutQuota err: %+v", err)
+	}
+	
+	c.JSON(http.StatusNoContent, gin.H{})
+}
+
 func GetRegisteredUEContext(c *gin.Context) {
 	setCorsHeader(c)
 
@@ -1351,12 +1406,11 @@ func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int6
 
 	recvByte := newCdrFile.CdrList[0].CdrByte
 
-
 	val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
 	asn.UnmarshalWithParams(recvByte, val, "")
 
 	chargingRecord := *(val.(*cdrType.ChargingRecord))
-	
+
 	for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
 		for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
 			total_cnt += usedUnitContainer.DataTotalVolume.Value
@@ -1377,8 +1431,8 @@ func GetChargingRecord(c *gin.Context) {
 
 	total_cnt, ul_cnt, dl_cnt := recvChargingRecord(supi)
 	c.JSON(http.StatusOK, gin.H{
-		"DataTotalVolume": total_cnt,
-		"DataVolumeUplink": ul_cnt,
+		"DataTotalVolume":    total_cnt,
+		"DataVolumeUplink":   ul_cnt,
 		"DataVolumeDownlink": dl_cnt,
 	})
 }

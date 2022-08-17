@@ -79,6 +79,33 @@ class ApiHelper {
     return false;
   }
 
+  static async fetchQuota() {
+    try {
+      let response = await Http.get(`quota`);
+      if (response.status === 200 && response.data) {
+        console.log("get quota", response.data["quota"])
+        return response.data;
+      }
+    } 
+    catch (error) {
+    }
+
+    return false;
+  }
+
+  static async updateQuota(quotaData) {
+    try {
+      let response = await Http.put(
+        `quota`, quotaData);
+      if (response.status === 204)
+        return true;
+    } catch (error) {
+      console.error(error);
+    }
+
+    return false;
+  }
+
   static async login(loginRequest) {
     console.log("login");
     try {
