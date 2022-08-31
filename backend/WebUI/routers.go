@@ -201,6 +201,20 @@ var routes = Routes{
 	},
 
 	{
+		"GetQuotaByID",
+		http.MethodGet,
+		"/quota/:supi",
+		GetQuotaByID,
+	},
+
+	{
+		"PutQuotaByID",
+		http.MethodPut,
+		"/quota/:supi",
+		PutQuotaByID,
+	},
+
+	{
 		"Registered UE Context",
 		http.MethodGet,
 		"/registered-ue-context",

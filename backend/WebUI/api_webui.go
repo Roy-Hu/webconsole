@@ -10,6 +10,9 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"strconv"
+	"io/ioutil"
+	"encoding/binary"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -41,6 +44,7 @@ const (
 )
 
 var httpsClient *http.Client
+var SupiRatingGroupIDMap map[string]uint32
 
 func init() {
 	httpsClient = &http.Client{
@@ -48,6 +52,8 @@ func init() {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
+
+	SupiRatingGroupIDMap = make(map[string]uint32)
 }
 
 func mapToByte(data map[string]interface{}) (ret []byte) {
@@ -1305,6 +1311,97 @@ func PutQuota(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
+func getRatingGroupIDBySupi(supi string) uint32{
+	ratingGroupID, ok := SupiRatingGroupIDMap[supi]
+	if !ok {
+		fileDir := "/tmp/"
+		fileName := fileDir + supi + ".cdr"
+
+		newCdrFile := cdrFile.CDRFile{}
+
+		newCdrFile.Decoding(fileName)
+
+		recvByte := newCdrFile.CdrList[0].CdrByte
+
+		val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
+		asn.UnmarshalWithParams(recvByte, val, "")
+
+		chargingRecord := *(val.(*cdrType.ChargingRecord))
+
+		for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
+			SupiRatingGroupIDMap[supi] = uint32(multipleUnitUsage.RatingGroup.Value)
+			ratingGroupID = uint32(multipleUnitUsage.RatingGroup.Value)
+			break
+		}
+	}
+
+	return ratingGroupID
+}
+
+func GetQuotaByID(c *gin.Context) {
+	setCorsHeader(c)
+
+	logger.WebUILog.Infoln("Get Quota")
+
+	supi, _ := c.Params.Get("supi")
+
+	ratingGroupID := getRatingGroupIDBySupi(supi)
+
+	quotafileName := "/tmp/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+
+	if _, err := os.Stat(quotafileName); errors.Is(err, os.ErrNotExist) {
+		// quota file does not exist
+		quotaBinary := make([]byte, 4)
+		binary.BigEndian.PutUint32(quotaBinary, uint32(1000000))
+
+		err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	quotaBinary, err := ioutil.ReadFile(quotafileName)
+	if err != nil {
+		panic(err)
+	}
+	quota := binary.BigEndian.Uint32(quotaBinary[:4])
+
+	c.JSON(http.StatusOK, gin.H{
+		"supi":     supi,
+		"quota":    quota,
+	})
+}
+
+func PutQuotaByID(c *gin.Context) {
+	setCorsHeader(c)
+	logger.WebUILog.Infoln("Put Quota Data by ID")
+
+	var quotaData QuotaData
+
+	if err := c.ShouldBindJSON(&quotaData); err != nil {
+		logger.WebUILog.Errorf("PutQuotaByID err: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"cause": "JSON format incorrect",
+		})
+		return
+	}
+	supi := c.Param("supi")
+
+	ratingGroupID := getRatingGroupIDBySupi(supi)
+
+	quotafileName := "/tmp/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+
+	quotaBinary := make([]byte, 4)
+	binary.BigEndian.PutUint32(quotaBinary, uint32(quotaData.Quota))
+
+	err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
+	if err != nil {
+		panic(err)
+	}
+	
+	c.JSON(http.StatusNoContent, gin.H{})	
+}
+
 func GetRegisteredUEContext(c *gin.Context) {
 	setCorsHeader(c)
 
@@ -1412,6 +1509,7 @@ func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int6
 	chargingRecord := *(val.(*cdrType.ChargingRecord))
 
 	for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
+		// fmt.Println("rating group id", multipleUnitUsage.RatingGroup.Value)
 		for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
 			total_cnt += usedUnitContainer.DataTotalVolume.Value
 			ul_cnt += usedUnitContainer.DataVolumeUplink.Value

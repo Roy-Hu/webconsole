@@ -6,20 +6,22 @@ import _ from 'lodash';
 import ApiHelper from "../../../util/ApiHelper";
 
 class RatinggroupQuotaModal extends Component {
-  constructor(props) {
-    super(props);
+  // constructor(props) {
+  //   super(props);
 
-    (async () => {
-      let quotadata = await ApiHelper.fetchQuota();
-      console.log("quota", quotadata["quota"])
-      this.schema.properties.quota.default = quotadata["quota"]
-    })();
-    // this.schema.properties.quota.default = ApiHelper.fetchQuota();
-  }
+  //   (async () => {
+  //     // this.propTypes
+  //     console.log("props", props)
+  //     let quotadata = await ApiHelper.fetchQuota(props.quota["supi"]);
+  //     this.schema.properties.quota.default = quotadata["quota"]
+  //   })();
+  //   // this.schema.properties.quota.default = ApiHelper.fetchQuota();
+  // }
+  
   static propTypes = {
     open: PropTypes.bool.isRequired,
     setOpen: PropTypes.func.isRequired,
-    quota: PropTypes.object,
+    quota: PropTypes.object.isRequired,
     onModify: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
   };
@@ -34,9 +36,15 @@ class RatinggroupQuotaModal extends Component {
     // "description": "A simple form example.",
     type: "object",
     required: [
+      // "supi",
       "quota",
     ],
     properties: {
+      // supi: {
+      //   type: "string",
+      //   title: "Supi",
+      //   // default: this.state.formData["supi"],
+      // },
       quota: {
         type: "integer",
         title: "Ratinggroup Quota (Bytes)",
@@ -53,24 +61,43 @@ class RatinggroupQuotaModal extends Component {
   //   this.schema.properties.quota.default = quota_temp;
   // }
 
-  // componentDidUpdate(prevProps, prevState, snapshot) {
-  //   console.log("componentDidUpdate")
+  // componentDidMount() {
+  //   console.log("componentDidMount", this.props.quota)
+  //   if (this.props.quota) {
+  //     let formData = {
+  //       quota: this.props.quota['quota'],
+  //     };
 
-  //   if (prevProps !== this.props) {
-  //     this.setState({ editMode: !!this.props.quota });
-
-  //     if (this.props.quota) {
-  //       let formData = {
-  //         quota: this.props.quota['quota'],
-  //       };
-
-  //       // this.updateFormData(formData).then();
-  //     }
+  //     this.setState({
+  //           formData: formData,
+  //     });
   //   }
   // }
 
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    console.log("componentDidUpdate", this.props.quota, "prevProps", prevProps)
+
+    if (prevProps !== this.props) {
+      // this.setState({ editMode: !!this.props.quota });
+
+      if (prevProps && prevProps.quota && this.props.quota && prevProps.quota['supi'] == this.props.quota['supi'])
+        return
+
+      if (this.props.quota) {
+        let formData = {
+          quota: this.props.quota['quota'],
+        };
+
+        this.setState({
+              formData: formData,
+        });
+
+      }
+    }
+  }
+
   async onChange(data) {
-    // console.log("onChange")
+    console.log("onChange")
 
     this.setState({
       formData: data.formData,
@@ -95,6 +122,7 @@ class RatinggroupQuotaModal extends Component {
 
     let quotaData = {
       "quota": formData["quota"],
+      "supi": formData["supi"],
     };
 
     this.props.onModify(quotaData);

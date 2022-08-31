@@ -79,11 +79,12 @@ class ApiHelper {
     return false;
   }
 
-  static async fetchQuota() {
+  static async fetchQuota(supi) {
     try {
-      let response = await Http.get(`quota`);
+      let response = await Http.get(`quota/${supi}`);
       if (response.status === 200 && response.data) {
-        console.log("get quota", response.data["quota"])
+        // console.log("get quota", response.data["quota"])
+
         return response.data;
       }
     } 
@@ -96,7 +97,7 @@ class ApiHelper {
   static async updateQuota(quotaData) {
     try {
       let response = await Http.put(
-        `quota`, quotaData);
+        `quota/${quotaData["supi"]}`, quotaData);
       if (response.status === 204)
         return true;
     } catch (error) {

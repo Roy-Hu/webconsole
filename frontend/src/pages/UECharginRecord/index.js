@@ -6,6 +6,7 @@ import {connect} from "react-redux";
 import UEInfoApiHelper from "../../util/UEInfoApiHelper"
 import RatinggroupQuotaModal from "./components/RatinggroupQuotaModal";
 import ApiHelper from "../../util/ApiHelper";
+import { flatMap } from 'lodash';
 // import Pagination from "react-bootstrap/Pagination";
 // import paginationFactory from 'react-bootstrap-table2-paginator';
 
@@ -39,7 +40,6 @@ class DetailButton extends Component {
 
   handleClick(cell, row, rowIndex) {
       UEInfoApiHelper.fetchUEInfoDetail(cell).then( result => {
-
         let success = result[0]
         let smContextRef = result[1]
 
@@ -48,15 +48,12 @@ class DetailButton extends Component {
           // console.log(smContextRef)
           UEInfoApiHelper.fetchUEInfoDetailSMF(smContextRef).then()
         }
-
-
       });
  }
 
   render() {
         const { cell, row, rowIndex } = this.props;
         return (
-
                 <Button
                     bsStyle="primary"
                     onClick={() => this.handleClick(cell, row, rowIndex)}
@@ -67,6 +64,8 @@ class DetailButton extends Component {
         );
     }
 }
+
+
 
 class UECharginRecord extends Component  {
   state = {
@@ -85,7 +84,7 @@ class UECharginRecord extends Component  {
         async () => {
           await UEInfoApiHelper.fetchUEWithCR();
         },3000);
-    }
+  }
 
   componentWillUnmount() {
     clearInterval(this.interval);
@@ -95,15 +94,17 @@ class UECharginRecord extends Component  {
     UEInfoApiHelper.fetchUEWithCR().then();
   }
 
-  async openEditQuota() {
+  async openEditQuota(cell) {
     console.log("openEditQuota")
 
-    const quota = await ApiHelper.fetchQuota();
+    const quota = await ApiHelper.fetchQuota(cell);
+    console.log("fetchquota supi", quota["supi"])
 
     this.setState({
       quotaModalOpen: true,
       quotaModalData: quota,
     });
+    console.log(this.state.quotaModalData)
   }
 
   async addQuota(subscriberData) {
@@ -117,15 +118,22 @@ class UECharginRecord extends Component  {
   }
 
   async updateQuota(quotaData) {
-    console.log("updateQuota")
+ 
+    console.log("updateQuota   quotadata:", quotaData, "this.state.quotaModalData", this.state.quotaModalData)
     this.setState({ quotaModalOpen: false });
 
-    const result = await ApiHelper.updateQuota(quotaData);
+    let newquotaData = this.state.quotaModalData
+    newquotaData["quota"] = quotaData["quota"]
+    this.setState({ quotaModalData: newquotaData });
+    console.log("after updateQuota:", this.state.quotaModalData)
+
+
+    const result = await ApiHelper.updateQuota(newquotaData);
 
     if (!result) {
-      alert("Error updating quota: " + quotaData["quota"]);
+      alert("Error updating quota: " + newquotaData["quota"]);
     }
-    ApiHelper.fetchQuota().then();
+    ApiHelper.fetchQuota(newquotaData["supi"]).then();
   }
 
   cellButton(cell, row, enumObject, rowIndex) {
@@ -163,22 +171,26 @@ class UECharginRecord extends Component  {
                         onClick={this.refreshTable.bind(this)}>
                   Refresh
                 </Button>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                <Button bsStyle={"primary"} className="subscribers__button"
-                        onClick={this.openEditQuota.bind(this)}>
-                  Modify RatinggroupQuota
-                </Button>
           </div>
           <div className="row">
             <div className="col-12">
               { !this.props.get_ue_cr_err &&
                 <BootstrapTable data={this.props.users_cr} striped={true} hover={true} pagination={true}/* defaultSorted={defaultSortedBy} pagination={ paginationFactory() }/*trStyle={this.rowStyleFormat.bind(this)}*/ >
-                  <TableHeaderColumn dataField="supi" width='25%' isKey={true} dataAlign="center" dataSort={true}>SUPI</TableHeaderColumn>
+                  <TableHeaderColumn dataField="supi" width='20%' isKey={true} dataAlign="center" dataSort={true}>SUPI</TableHeaderColumn>
                   <TableHeaderColumn dataField="status" width='10%' dataSort={true}>Status</TableHeaderColumn>
                   <TableHeaderColumn dataField="supi" width='8%' dataFormat={this.cellButton.bind(this)}>Details</TableHeaderColumn>
-                  <TableHeaderColumn dataField="totalVol" width='19%' dataSort={true}>Data Total Volume &#40;KB&#41; </TableHeaderColumn>
-                  <TableHeaderColumn dataField="ulVol" width='19%' dataSort={true}>Data Volume Uplink &#40;KB&#41;</TableHeaderColumn>
-                  <TableHeaderColumn dataField="dlVol" width='19%' dataSort={true}>Data Volume Downlink &#40;KB&#41;</TableHeaderColumn>
+                  <TableHeaderColumn dataField="supi" width='14%' dataFormat={
+                    (cell, row, rowIndex, formatExtraData) => {
+                      return (<Button bsStyle={"primary"} className="subscribers__button"
+                      onClick={this.openEditQuota.bind(this, cell)}>
+                        Modify RatinggroupQuota
+                    </Button>
+                    );
+                      }
+                    }>Modify quota</TableHeaderColumn>
+                  <TableHeaderColumn dataField="totalVol" width='16%' dataSort={true}>Data Total Volume &#40;KB&#41; </TableHeaderColumn>
+                  <TableHeaderColumn dataField="ulVol" width='16%' dataSort={true}>Data Volume Uplink &#40;KB&#41;</TableHeaderColumn>
+                  <TableHeaderColumn dataField="dlVol" width='16%' dataSort={true}>Data Volume Downlink &#40;KB&#41;</TableHeaderColumn>
                 </BootstrapTable>
               }
             </div>
@@ -193,6 +205,8 @@ class UECharginRecord extends Component  {
           <RatinggroupQuotaModal open={this.state.quotaModalOpen}
             setOpen={val => this.setState({ quotaModalOpen: val })}
             quota={this.state.quotaModalData}
+            // quota={{quota: 7777, supi: 'imsi-208930000000003'}}
+           
             onModify={this.updateQuota.bind(this)}
             onSubmit={this.addQuota.bind(this)} />
         </div>
@@ -201,9 +215,11 @@ class UECharginRecord extends Component  {
   }
 }
 
+
 export default withRouter(connect(state => ({
   users_cr: state.ueinfo.users_cr,
   get_ue_cr_err: state.ueinfo.get_ue_cr_err,
   ue_cr_err_msg: state.ueinfo.ue_cr_err_msg,
   smContextRef: state.ueinfo.smContextRef
 }))(UECharginRecord));
+
