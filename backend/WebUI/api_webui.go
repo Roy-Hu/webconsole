@@ -2,17 +2,17 @@ package WebUI
 
 import (
 	"crypto/tls"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"io/ioutil"
-	"encoding/binary"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -54,6 +54,7 @@ func init() {
 	}
 
 	SupiRatingGroupIDMap = make(map[string]uint32)
+	SupiRatingGroupIDMap["imsi-208930000000003"] = 1
 }
 
 func mapToByte(data map[string]interface{}) (ret []byte) {
@@ -1275,7 +1276,6 @@ func GetQuota(c *gin.Context) {
 	// var authSubsData models.AuthenticationSubscription
 	json.Unmarshal(mapToByte(authSubsDataInterface), &quotaData)
 
-
 	// quotaData := QuotaData{Quota: db_quota}
 
 	c.JSON(http.StatusOK, quotaData)
@@ -1307,11 +1307,11 @@ func PutQuota(c *gin.Context) {
 	if _, err := mongoapi.RestfulAPIPutOne(quotaDataColl, filter, quotaDataBsonM); err != nil {
 		logger.WebUILog.Errorf("PutQuota err: %+v", err)
 	}
-	
+
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-func getRatingGroupIDBySupi(supi string) uint32{
+func getRatingGroupIDBySupi(supi string) uint32 {
 	ratingGroupID, ok := SupiRatingGroupIDMap[supi]
 	if !ok {
 		fileDir := "/tmp/"
@@ -1334,6 +1334,7 @@ func getRatingGroupIDBySupi(supi string) uint32{
 			break
 		}
 	}
+	logger.WebUILog.Error(supi, "ratingGroupID: ", ratingGroupID)
 
 	return ratingGroupID
 }
@@ -1347,7 +1348,7 @@ func GetQuotaByID(c *gin.Context) {
 
 	ratingGroupID := getRatingGroupIDBySupi(supi)
 
-	quotafileName := "/tmp/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	quotafileName := "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
 
 	if _, err := os.Stat(quotafileName); errors.Is(err, os.ErrNotExist) {
 		// quota file does not exist
@@ -1364,11 +1365,11 @@ func GetQuotaByID(c *gin.Context) {
 	if err != nil {
 		panic(err)
 	}
-	quota := binary.BigEndian.Uint32(quotaBinary[:4])
+	quota := binary.BigEndian.Uint32(quotaBinary[:5])
 
 	c.JSON(http.StatusOK, gin.H{
-		"supi":     supi,
-		"quota":    quota,
+		"supi":  supi,
+		"quota": quota,
 	})
 }
 
@@ -1385,11 +1386,12 @@ func PutQuotaByID(c *gin.Context) {
 		})
 		return
 	}
-	supi := c.Param("supi")
+	// supi := c.Param("supi")
 
-	ratingGroupID := getRatingGroupIDBySupi(supi)
+	// ratingGroupID := getRatingGroupIDBySupi(supi)
 
-	quotafileName := "/tmp/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	// quotafileName := "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	quotafileName := "/tmp/quota/1.quota"
 
 	quotaBinary := make([]byte, 4)
 	binary.BigEndian.PutUint32(quotaBinary, uint32(quotaData.Quota))
@@ -1398,8 +1400,19 @@ func PutQuotaByID(c *gin.Context) {
 	if err != nil {
 		panic(err)
 	}
-	
-	c.JSON(http.StatusNoContent, gin.H{})	
+
+	q, _ := ioutil.ReadFile(quotafileName)
+
+	quota := binary.BigEndian.Uint32(q[:5])
+
+	// quota := binary.BigEndian.PutUint32(q)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.WebUILog.Error("quota", quota)
+
+	c.JSON(http.StatusNoContent, gin.H{})
 }
 
 func GetRegisteredUEContext(c *gin.Context) {
@@ -1496,7 +1509,7 @@ func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int6
 	fileDir := "/tmp/"
 
 	fileName := fileDir + supi + ".cdr"
-	fmt.Println("supi", supi)
+	// fmt.Println("supi", supi)
 	newCdrFile := cdrFile.CDRFile{}
 
 	newCdrFile.Decoding(fileName)
