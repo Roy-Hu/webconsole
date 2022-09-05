@@ -146,10 +146,6 @@ class UeInfoApiHelper {
 
       let response = await Http.get(url);
       if (response.status === 200 && response.data) {    
-        response.data.DataTotalVolume = (response.data.DataTotalVolume/1000).toFixed(1);
-        response.data.DataVolumeDownlink = (response.data.DataVolumeDownlink/1000).toFixed(1);
-        response.data.DataVolumeUplink = (response.data.DataVolumeUplink/1000).toFixed(1);
-
         return response.data;
       } else {
         console.log("Request failed, url:", url)
@@ -178,7 +174,6 @@ class UeInfoApiHelper {
             new UEInfoWithCR(ue_context.Supi, ue_context.CmState)
             );
 
-
           // registered_users.forEach(function(item, i) {
           for (let i = 0; i < registered_users.length; i++) {
             const item = registered_users[i];
@@ -187,6 +182,7 @@ class UeInfoApiHelper {
             registered_users[i].totalVol = charginrecord.DataTotalVolume
             registered_users[i].ulVol = charginrecord.DataVolumeUplink
             registered_users[i].dlVol = charginrecord.DataVolumeDownlink
+            registered_users[i].quotaLeft = charginrecord.quotaLeft
           };
           // console.log("registered_users:", registered_users)
           // totalVoltotalVol charginrecord.DataTotalVolume, 

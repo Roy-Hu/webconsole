@@ -176,8 +176,8 @@ class UECharginRecord extends Component  {
             <div className="col-12">
               { !this.props.get_ue_cr_err &&
                 <BootstrapTable data={this.props.users_cr} striped={true} hover={true} pagination={true}/* defaultSorted={defaultSortedBy} pagination={ paginationFactory() }/*trStyle={this.rowStyleFormat.bind(this)}*/ >
-                  <TableHeaderColumn dataField="supi" width='20%' isKey={true} dataAlign="center" dataSort={true}>SUPI</TableHeaderColumn>
-                  <TableHeaderColumn dataField="status" width='10%' dataSort={true}>Status</TableHeaderColumn>
+                  <TableHeaderColumn dataField="supi" width='15%' isKey={true} dataAlign="center" dataSort={true}>SUPI</TableHeaderColumn>
+                  <TableHeaderColumn dataField="status" width='8%' dataSort={true}>Status</TableHeaderColumn>
                   <TableHeaderColumn dataField="supi" width='8%' dataFormat={this.cellButton.bind(this)}>Details</TableHeaderColumn>
                   <TableHeaderColumn dataField="supi" width='14%' dataFormat={
                     (cell, row, rowIndex, formatExtraData) => {
@@ -188,9 +188,10 @@ class UECharginRecord extends Component  {
                     );
                       }
                     }>Modify quota</TableHeaderColumn>
-                  <TableHeaderColumn dataField="totalVol" width='16%' dataSort={true}>Data Total Volume &#40;KB&#41; </TableHeaderColumn>
-                  <TableHeaderColumn dataField="ulVol" width='16%' dataSort={true}>Data Volume Uplink &#40;KB&#41;</TableHeaderColumn>
-                  <TableHeaderColumn dataField="dlVol" width='16%' dataSort={true}>Data Volume Downlink &#40;KB&#41;</TableHeaderColumn>
+                  <TableHeaderColumn dataField="quotaLeft" width='13%' dataSort={true}>Quota Left &#40;KB&#41; </TableHeaderColumn>
+                  <TableHeaderColumn dataField="totalVol" width='14%' dataSort={true}>Data Total Volume &#40;KB&#41; </TableHeaderColumn>
+                  <TableHeaderColumn dataField="ulVol" width='14%' dataSort={true}>Data Volume Uplink &#40;KB&#41;</TableHeaderColumn>
+                  <TableHeaderColumn dataField="dlVol" width='14%' dataSort={true}>Data Volume Downlink &#40;KB&#41;</TableHeaderColumn>
                 </BootstrapTable>
               }
             </div>
