@@ -1339,10 +1339,14 @@ func getRatingGroupIDBySupi(supi string) uint32 {
 	return ratingGroupID
 }
 
-func getQuotaBySupi(supi string) uint32 {
+func getQuotaBySupi(supi string, forNotify bool) uint32 {
 	ratingGroupID := getRatingGroupIDBySupi(supi)
-
-	quotafileName := "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	var quotafileName string
+	if forNotify {
+		quotafileName = "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	} else {
+		quotafileName = "/tmp/quota_webconsole/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	}
 
 	if _, err := os.Stat(quotafileName); errors.Is(err, os.ErrNotExist) {
 		// quota file does not exist
@@ -1371,7 +1375,7 @@ func GetQuotaByID(c *gin.Context) {
 
 	supi, _ := c.Params.Get("supi")
 
-	quota := getQuotaBySupi(supi)
+	quota := getQuotaBySupi(supi, true)
 	
 	c.JSON(http.StatusOK, gin.H{
 		"supi":  supi,
@@ -1545,7 +1549,7 @@ func GetChargingRecord(c *gin.Context) {
 	logger.WebUILog.Infoln("Get Charging Record")
 
 	supi, _ := c.Params.Get("supi")
-	quota := getQuotaBySupi(supi)
+	quota := getQuotaBySupi(supi, false)
 
 	total_cnt, ul_cnt, dl_cnt := recvChargingRecord(supi)
 	c.JSON(http.StatusOK, gin.H{
