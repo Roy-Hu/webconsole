@@ -1519,6 +1519,10 @@ func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int6
 	fileDir := "/tmp/"
 
 	fileName := fileDir + supi + ".cdr"
+
+	if _, err := os.Stat(fileName); errors.Is(err, os.ErrNotExist) {
+		return -1, -1, -1
+	}
 	// fmt.Println("supi", supi)
 	newCdrFile := cdrFile.CDRFile{}
 
@@ -1549,13 +1553,23 @@ func GetChargingRecord(c *gin.Context) {
 	logger.WebUILog.Infoln("Get Charging Record")
 
 	supi, _ := c.Params.Get("supi")
-	quota := getQuotaBySupi(supi, false)
+	quota := int32(getQuotaBySupi(supi, false))
 
 	total_cnt, ul_cnt, dl_cnt := recvChargingRecord(supi)
-	c.JSON(http.StatusOK, gin.H{
-		"DataTotalVolume":    total_cnt,
-		"DataVolumeUplink":   ul_cnt,
-		"DataVolumeDownlink": dl_cnt,
-		"quotaLeft":          quota,
-	})
+
+	if total_cnt == -1 {
+		c.JSON(http.StatusOK, gin.H{
+			"DataTotalVolume":    "not found",
+			"DataVolumeUplink":   "not found",
+			"DataVolumeDownlink": "not found",
+			"quotaLeft":          quota,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"DataTotalVolume":    total_cnt,
+			"DataVolumeUplink":   ul_cnt,
+			"DataVolumeDownlink": dl_cnt,
+			"quotaLeft":          quota,
+		})
+	}
 }
