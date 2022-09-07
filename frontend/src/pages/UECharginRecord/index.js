@@ -188,7 +188,7 @@ class UECharginRecord extends Component  {
                     );
                       }
                     }>Modify quota</TableHeaderColumn>
-                  <TableHeaderColumn dataField="quotaLeft" width='13%' dataSort={true}>Quota Left &#40;KB&#41; </TableHeaderColumn>
+                  <TableHeaderColumn dataField="quotaLeft" width='13%' dataSort={true}>Quota Left</TableHeaderColumn>
                   <TableHeaderColumn dataField="totalVol" width='14%' dataSort={true}>Data Total Volume &#40;KB&#41; </TableHeaderColumn>
                   <TableHeaderColumn dataField="ulVol" width='14%' dataSort={true}>Data Volume Uplink &#40;KB&#41;</TableHeaderColumn>
                   <TableHeaderColumn dataField="dlVol" width='14%' dataSort={true}>Data Volume Downlink &#40;KB&#41;</TableHeaderColumn>

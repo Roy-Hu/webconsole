@@ -47,7 +47,7 @@ class RatinggroupQuotaModal extends Component {
       // },
       quota: {
         type: "integer",
-        title: "Ratinggroup Quota (Bytes)",
+        title: "Ratinggroup Quota",
         default: 1000000000,
         maximum: 2000000000,
         minimum: 0

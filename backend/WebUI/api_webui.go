@@ -1559,9 +1559,9 @@ func GetChargingRecord(c *gin.Context) {
 
 	if total_cnt == -1 {
 		c.JSON(http.StatusOK, gin.H{
-			"DataTotalVolume":    "not found",
-			"DataVolumeUplink":   "not found",
-			"DataVolumeDownlink": "not found",
+			"DataTotalVolume":    0,
+			"DataVolumeUplink":   0,
+			"DataVolumeDownlink": 0,
 			"quotaLeft":          quota,
 		})
 	} else {
