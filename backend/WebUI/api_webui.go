@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
+
+	ftpServer "github.com/free5gc/webconsole/backend/ftp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -1314,12 +1315,24 @@ func PutQuota(c *gin.Context) {
 func getRatingGroupIDBySupi(supi string) uint32 {
 	ratingGroupID, ok := SupiRatingGroupIDMap[supi]
 	if !ok {
-		fileDir := "/tmp/"
-		fileName := fileDir + supi + ".cdr"
+
+		fileName := supi + ".cdr"
+		webuiSelf := webui_context.WEBUI_Self()
+		ftpConn := webuiSelf.FtpServer
+
+		r, err := ftpConn.Retr(fileName)
+		if err != nil {
+			panic(err)
+		}
+		defer r.Close()
+		cdr, err1 := ioutil.ReadAll(r)
+
+		if err1 != nil {
+			panic(err1)
+		}
 
 		newCdrFile := cdrFile.CDRFile{}
-
-		newCdrFile.Decoding(fileName)
+		newCdrFile.DecodingBytes(cdr)
 
 		recvByte := newCdrFile.CdrList[0].CdrByte
 
@@ -1340,31 +1353,31 @@ func getRatingGroupIDBySupi(supi string) uint32 {
 }
 
 func getQuotaBySupi(supi string, forNotify bool) uint32 {
-	ratingGroupID := getRatingGroupIDBySupi(supi)
-	var quotafileName string
-	if forNotify {
-		quotafileName = "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
-	} else {
-		quotafileName = "/tmp/quota_webconsole/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
-	}
+	// ratingGroupID := getRatingGroupIDBySupi(supi)
+	// var quotafileName string
+	// if forNotify {
+	// 	quotafileName = "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	// } else {
+	// 	quotafileName = "/tmp/quota_webconsole/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
+	// }
 
-	if _, err := os.Stat(quotafileName); errors.Is(err, os.ErrNotExist) {
-		// quota file does not exist
-		quotaBinary := make([]byte, 4)
-		binary.BigEndian.PutUint32(quotaBinary, uint32(1000000))
+	// if _, err := os.Stat(quotafileName); errors.Is(err, os.ErrNotExist) {
+	// 	// quota file does not exist
+	// 	quotaBinary := make([]byte, 4)
+	// 	binary.BigEndian.PutUint32(quotaBinary, uint32(1000000))
 
-		err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
-		if err != nil {
-			panic(err)
-		}
-	}
+	// 	err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 
-	quotaBinary, err := ioutil.ReadFile(quotafileName)
-	if err != nil {
-		panic(err)
-	}
-	quota := binary.BigEndian.Uint32(quotaBinary[:5])
-
+	// quotaBinary, err := ioutil.ReadFile(quotafileName)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// quota := binary.BigEndian.Uint32(quotaBinary[:5])
+	quota := uint32(200)
 	return quota
 }
 
@@ -1376,7 +1389,7 @@ func GetQuotaByID(c *gin.Context) {
 	supi, _ := c.Params.Get("supi")
 
 	quota := getQuotaBySupi(supi, true)
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"supi":  supi,
 		"quota": quota,
@@ -1516,17 +1529,21 @@ func GetRandomNumber(c *gin.Context) {
 }
 
 func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int64) {
-	fileDir := "/tmp/"
+	fileName := supi + ".cdr"
 
-	fileName := fileDir + supi + ".cdr"
+	cdr, err := ftpServer.FTPRetrv(fileName)
 
-	if _, err := os.Stat(fileName); errors.Is(err, os.ErrNotExist) {
-		return -1, -1, -1
+	if err != nil {
+		logger.WebUILog.Warn("Fail to retrv file: ", fileName)
+		panic(err)
 	}
+
+	logger.WebUILog.Warn("Retr CDR success")
 	// fmt.Println("supi", supi)
 	newCdrFile := cdrFile.CDRFile{}
 
-	newCdrFile.Decoding(fileName)
+	newCdrFile.DecodingBytes(cdr)
+	logger.WebUILog.Warn("Decode CDR success")
 
 	recvByte := newCdrFile.CdrList[0].CdrByte
 

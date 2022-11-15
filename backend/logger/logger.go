@@ -17,6 +17,7 @@ var (
 	WebUILog   *logrus.Entry
 	ContextLog *logrus.Entry
 	GinLog     *logrus.Entry
+	FtpLog     *logrus.Entry
 )
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 	WebUILog = log.WithFields(logrus.Fields{"component": "WebUI", "category": "WebUI"})
 	ContextLog = log.WithFields(logrus.Fields{"component": "WebUI", "category": "Context"})
 	GinLog = log.WithFields(logrus.Fields{"component": "WebUI", "category": "GIN"})
+	FtpLog = log.WithFields(logrus.Fields{"component": "WebUI", "category": "FtpLog"})
 }
 
 func LogFileHook(logNfPath string, log5gcPath string) error {

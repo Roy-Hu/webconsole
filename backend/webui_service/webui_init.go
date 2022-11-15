@@ -8,15 +8,14 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/gin-contrib/cors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/WebUI"
 	"github.com/free5gc/webconsole/backend/factory"
 	"github.com/free5gc/webconsole/backend/logger"
 	"github.com/free5gc/webconsole/backend/webui_context"
+	"github.com/gin-contrib/cors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 type WEBUI struct{}
