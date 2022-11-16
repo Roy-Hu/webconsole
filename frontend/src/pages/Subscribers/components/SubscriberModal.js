@@ -159,6 +159,12 @@ function sliceConfigurationsFromSubscriber(subscriber) {
   return sliceConfigurations;
 }
 
+function urrConfigurationsFromSubscriber(subscriber) {
+  console.log("urrConfigurationsFromSubscriber", subscriber.URRs)
+  // subscriber.URRs
+  return subscriber.URRs
+}
+
 class SubscriberModal extends Component {
   static propTypes = {
     open: PropTypes.bool.isRequired,
@@ -292,6 +298,18 @@ class SubscriberModal extends Component {
                 "5qi": 9,
               }
             ]
+          },
+        ],
+      },
+      urrConfigurations: {
+        type: "array",
+        title: "URR Configurations",
+        items: { $ref: "#/definitions/URRConfiguration" },
+        default: [
+          {
+            "totalVolume": 100,
+            "uplinkVolume": 100,
+            "downlinkVolume": 100,
           },
         ],
       },
@@ -441,6 +459,74 @@ class SubscriberModal extends Component {
         type: "string",
         pattern: "^[0-9]+(\\.[0-9]+)? (bps|Kbps|Mbps|Gbps|Tbps)$"
       },
+      URRConfiguration: {
+        type: "object",
+        title: "URR",
+        properties: {
+          authenticationMethod: {
+            type: "string",
+            title: "URR type",
+            default: "Charging",
+            enum: ["Charging", "Monitor"],
+          },
+          totalVolume: {
+            type: "integer",
+            title: "Total Volume Threshold",
+            minimum: 0,
+            maximum: 1000000000,
+          },
+          uplinkVolume: {
+            type: "integer",
+            title: "Uplink Volume",
+            minimum: 0,
+            maximum: 1000000000,
+          },
+          downlinkVolume: {
+            type: "integer",
+            title: "Downlink Volume",
+            minimum: 0,
+            maximum: 1000000000,
+          },
+          onlineChargingChk: {
+            type: "boolean",
+            title: "Online Charging",
+            default: false
+          },
+        },
+        "dependencies": {
+          onlineChargingChk: {
+            "oneOf": [
+              {
+                "properties": {
+                  onlineChargingChk: {
+                    "enum": [false]
+                  }
+                },
+              },
+              {
+                "properties": {
+                  onlineChargingChk: {
+                    "enum": [true]
+                  },
+                  quota: {
+                    type: "integer",
+                    title: "Quota",
+                  },
+                  // upConfidentiality: {
+                  //   type: "string",
+                  //   title: "Confidentiality of UP Security",
+                  //   enum: ["NOT_NEEDED", "PREFERRED", "REQUIRED"],
+                  // },
+                },
+                // "required": [
+                //   "upIntegrity",
+                //   "upConfidentiality"
+                // ]
+              }
+            ]
+          },
+        }
+      },
     },
   };
 
@@ -489,7 +575,9 @@ class SubscriberModal extends Component {
             subscriber['AuthenticationSubscription']["opc"]["opcValue"],
           SQN: subscriber['AuthenticationSubscription']["sequenceNumber"],
           sliceConfigurations: sliceConfigurationsFromSubscriber(subscriber),
+          urrConfigurations: urrConfigurationsFromSubscriber(subscriber),
         };
+        console.log("componentDidUpdate", formData)
 
         this.updateFormData(formData).then();
       }
@@ -534,6 +622,7 @@ class SubscriberModal extends Component {
     const formData = result.formData;
     const OP = formData["OPOPcSelect"] === "OP" ? formData["OPOPc"] : "";
     const OPc = formData["OPOPcSelect"] === "OPc" ? formData["OPOPc"] : "";
+    console.log("formData", formData)
 
     let subscriberData = {
       "userNumber": formData["userNumber"],
@@ -611,7 +700,8 @@ class SubscriberModal extends Component {
             )
           }]))
       },
-      "FlowRules": flowRulesFromSliceConfiguration(formData["sliceConfigurations"])
+      "FlowRules": flowRulesFromSliceConfiguration(formData["sliceConfigurations"]),
+      "URRs": formData["urrConfigurations"]
     };
 
     if(this.state.editMode) {
