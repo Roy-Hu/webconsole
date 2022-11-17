@@ -58,7 +58,6 @@ class SubscriberOverview extends Component {
    */
   async updateSubscriber(subscriberData) {
     this.setState({ subscriberModalOpen: false });
-    console.log("updateSubscriber", subscriberData)
 
     const result = await ApiHelper.updateSubscriber(subscriberData);
 

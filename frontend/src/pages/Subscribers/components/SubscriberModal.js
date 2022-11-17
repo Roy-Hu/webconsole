@@ -159,12 +159,6 @@ function sliceConfigurationsFromSubscriber(subscriber) {
   return sliceConfigurations;
 }
 
-function urrConfigurationsFromSubscriber(subscriber) {
-  console.log("urrConfigurationsFromSubscriber", subscriber.URRs)
-  // subscriber.URRs
-  return subscriber.URRs
-}
-
 class SubscriberModal extends Component {
   static propTypes = {
     open: PropTypes.bool.isRequired,
@@ -301,16 +295,11 @@ class SubscriberModal extends Component {
           },
         ],
       },
-      urrConfigurations: {
+      chargingConfigurations: {
         type: "array",
-        title: "URR Configurations",
-        items: { $ref: "#/definitions/URRConfiguration" },
+        title: "Charging Configurations",
+        items: { $ref: "#/definitions/chargingConfiguration" },
         default: [
-          {
-            "totalVolume": 100,
-            "uplinkVolume": 100,
-            "downlinkVolume": 100,
-          },
         ],
       },
     },
@@ -459,34 +448,34 @@ class SubscriberModal extends Component {
         type: "string",
         pattern: "^[0-9]+(\\.[0-9]+)? (bps|Kbps|Mbps|Gbps|Tbps)$"
       },
-      URRConfiguration: {
+      chargingConfiguration: {
         type: "object",
-        title: "URR",
+        title: "Charging",
         properties: {
-          authenticationMethod: {
-            type: "string",
-            title: "URR type",
-            default: "Charging",
-            enum: ["Charging", "Monitor"],
-          },
-          totalVolume: {
-            type: "integer",
-            title: "Total Volume Threshold",
-            minimum: 0,
-            maximum: 1000000000,
-          },
-          uplinkVolume: {
-            type: "integer",
-            title: "Uplink Volume",
-            minimum: 0,
-            maximum: 1000000000,
-          },
-          downlinkVolume: {
-            type: "integer",
-            title: "Downlink Volume",
-            minimum: 0,
-            maximum: 1000000000,
-          },
+          // authenticationMethod: {
+          //   type: "string",
+          //   title: "URR type",
+          //   default: "Charging",
+          //   enum: ["Charging", "Monitor"],
+          // },
+          // totalVolume: {
+          //   type: "integer",
+          //   title: "Total Volume Threshold",
+          //   minimum: 0,
+          //   maximum: 1000000000,
+          // },
+          // uplinkVolume: {
+          //   type: "integer",
+          //   title: "Uplink Volume",
+          //   minimum: 0,
+          //   maximum: 1000000000,
+          // },
+          // downlinkVolume: {
+          //   type: "integer",
+          //   title: "Downlink Volume",
+          //   minimum: 0,
+          //   maximum: 1000000000,
+          // },
           onlineChargingChk: {
             type: "boolean",
             title: "Online Charging",
@@ -510,7 +499,16 @@ class SubscriberModal extends Component {
                   },
                   quota: {
                     type: "integer",
-                    title: "Quota",
+                    title: "Quota (monetary)",
+                    default: 5000,
+                    maximum: 2000000000,
+                    minimum: 1
+                  },
+                  unitCost: {
+                    type: "string",
+                    title: "Unit cost (money per byte)",
+                    pattern: "^[0-9]+(\\.[0-9]+)?",
+                    default: "1"
                   },
                   // upConfidentiality: {
                   //   type: "string",
@@ -575,9 +573,11 @@ class SubscriberModal extends Component {
             subscriber['AuthenticationSubscription']["opc"]["opcValue"],
           SQN: subscriber['AuthenticationSubscription']["sequenceNumber"],
           sliceConfigurations: sliceConfigurationsFromSubscriber(subscriber),
-          urrConfigurations: urrConfigurationsFromSubscriber(subscriber),
         };
-        console.log("componentDidUpdate", formData)
+
+        if (subscriber["ChargingData"]) {
+          formData["chargingConfigurations"] = subscriber["ChargingData"]
+        }
 
         this.updateFormData(formData).then();
       }
@@ -622,7 +622,6 @@ class SubscriberModal extends Component {
     const formData = result.formData;
     const OP = formData["OPOPcSelect"] === "OP" ? formData["OPOPc"] : "";
     const OPc = formData["OPOPcSelect"] === "OPc" ? formData["OPOPc"] : "";
-    console.log("formData", formData)
 
     let subscriberData = {
       "userNumber": formData["userNumber"],
@@ -701,7 +700,7 @@ class SubscriberModal extends Component {
           }]))
       },
       "FlowRules": flowRulesFromSliceConfiguration(formData["sliceConfigurations"]),
-      "URRs": formData["urrConfigurations"]
+      "ChargingData": formData["chargingConfigurations"]
     };
 
     if(this.state.editMode) {
