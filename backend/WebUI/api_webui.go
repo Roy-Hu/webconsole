@@ -42,7 +42,7 @@ const (
 	userDataColl     = "userData"
 	tenantDataColl   = "tenantData"
 	quotaDataColl    = "quotaData"
-	urrDataColl      = "urrData"
+	chargingDataColl      = "chargingData"
 )
 
 var httpsClient *http.Client
@@ -894,7 +894,7 @@ func GetSubscriberByID(c *gin.Context) {
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
-	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(urrDataColl, filterUeIdOnly)
+	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filterUeIdOnly)
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
@@ -1151,10 +1151,10 @@ func PutSubscriberByID(c *gin.Context) {
 		chargingBsonA = append(chargingBsonA, chargingBsonM)
 	}
 
-	if err := mongoapi.RestfulAPIDeleteMany(urrDataColl, filterUeIdOnly); err != nil {
+	if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
-	if err := mongoapi.RestfulAPIPostMany(urrDataColl, filterUeIdOnly, chargingBsonA); err != nil {
+	if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, chargingBsonA); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 
