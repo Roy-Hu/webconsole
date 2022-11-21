@@ -1,8 +1,8 @@
-import React, { Component } from 'react';
+import React, { Component } from "react";
 import { Modal } from "react-bootstrap";
 import Form from "react-jsonschema-form";
-import PropTypes from 'prop-types';
-import _ from 'lodash';
+import PropTypes from "prop-types";
+import _ from "lodash";
 import ApiHelper from "../../../util/ApiHelper";
 
 class RatinggroupQuotaModal extends Component {
@@ -17,7 +17,7 @@ class RatinggroupQuotaModal extends Component {
   //   })();
   //   // this.schema.properties.quota.default = ApiHelper.fetchQuota();
   // }
-  
+
   static propTypes = {
     open: PropTypes.bool.isRequired,
     setOpen: PropTypes.func.isRequired,
@@ -50,7 +50,7 @@ class RatinggroupQuotaModal extends Component {
         title: "Ratinggroup Quota",
         default: 1000000000,
         maximum: 2000000000,
-        minimum: 0
+        minimum: 0,
       },
     },
   };
@@ -75,29 +75,33 @@ class RatinggroupQuotaModal extends Component {
   // }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
-    console.log("componentDidUpdate", this.props.quota, "prevProps", prevProps)
+    console.log("componentDidUpdate", this.props.quota, "prevProps", prevProps);
 
     if (prevProps !== this.props) {
       // this.setState({ editMode: !!this.props.quota });
 
-      if (prevProps && prevProps.quota && this.props.quota && prevProps.quota['supi'] == this.props.quota['supi'])
-        return
+      if (
+        prevProps &&
+        prevProps.quota &&
+        this.props.quota &&
+        prevProps.quota["supi"] == this.props.quota["supi"]
+      )
+        return;
 
       if (this.props.quota) {
         let formData = {
-          quota: this.props.quota['quota'],
+          quota: this.props.quota["quota"],
         };
 
         this.setState({
-              formData: formData,
+          formData: formData,
         });
-
       }
     }
   }
 
   async onChange(data) {
-    console.log("onChange")
+    console.log("onChange");
 
     this.setState({
       formData: data.formData,
@@ -121,8 +125,8 @@ class RatinggroupQuotaModal extends Component {
     const formData = result.formData;
 
     let quotaData = {
-      "quota": formData["quota"],
-      "supi": formData["supi"],
+      quota: formData["quota"],
+      supi: formData["supi"],
     };
 
     this.props.onModify(quotaData);
@@ -134,7 +138,8 @@ class RatinggroupQuotaModal extends Component {
         show={this.props.open}
         className={"fields__edit-modal theme-light"}
         backdrop={"static"}
-        onHide={this.props.setOpen.bind(this, false)}>
+        onHide={this.props.setOpen.bind(this, false)}
+      >
         <Modal.Header closeButton>
           <Modal.Title id="example-modal-sizes-title-lg">
             Edit Quota
@@ -143,15 +148,16 @@ class RatinggroupQuotaModal extends Component {
 
         <Modal.Body>
           {
-            <Form schema={this.schema}
+            <Form
+              schema={this.schema}
               formData={this.state.formData}
               onChange={this.onChange.bind(this)}
-              onSubmit={this.onSubmitClick.bind(this)} />
+              onSubmit={this.onSubmitClick.bind(this)}
+            />
           }
         </Modal.Body>
       </Modal>
     );
-
   }
 }
 

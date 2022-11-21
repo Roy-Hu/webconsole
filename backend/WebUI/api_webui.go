@@ -42,6 +42,7 @@ const (
 	userDataColl     = "userData"
 	tenantDataColl   = "tenantData"
 	quotaDataColl    = "quotaData"
+	urrDataColl      = "urrData"
 )
 
 var httpsClient *http.Client
@@ -893,6 +894,10 @@ func GetSubscriberByID(c *gin.Context) {
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
+	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(urrDataColl, filterUeIdOnly)
+	if err != nil {
+		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
+	}
 
 	var authSubsData models.AuthenticationSubscription
 	json.Unmarshal(mapToByte(authSubsDataInterface), &authSubsData)
@@ -908,6 +913,8 @@ func GetSubscriberByID(c *gin.Context) {
 	json.Unmarshal(mapToByte(smPolicyDataInterface), &smPolicyData)
 	var flowRules []FlowRule
 	json.Unmarshal(sliceToByte(flowRuleDataInterface), &flowRules)
+	var chargingData []ChargingData
+	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
 
 	for key, SnssaiData := range smPolicyData.SmPolicySnssaiData {
 		tmpSmPolicyDnnData := make(map[string]models.SmPolicyDnnData)
@@ -929,6 +936,7 @@ func GetSubscriberByID(c *gin.Context) {
 		AmPolicyData:                      amPolicyData,
 		SmPolicyData:                      smPolicyData,
 		FlowRules:                         flowRules,
+		ChargingData:                      chargingData,
 	}
 
 	c.JSON(http.StatusOK, subsData)
@@ -1124,6 +1132,29 @@ func PutSubscriberByID(c *gin.Context) {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 	if err := mongoapi.RestfulAPIPostMany(flowRuleDataColl, filter, flowRulesBsonA); err != nil {
+		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	}
+
+	// charging
+	logger.WebUILog.Warnln("subsData.URRs:", subsData.ChargingData)
+
+	chargingBsonA := make([]interface{}, 0, len(subsData.ChargingData))
+	for _, urr := range subsData.ChargingData {
+		chargingBsonM := toBsonM(urr)
+
+		chargingBsonM["ueId"] = ueId
+		if urr.OnlineCharging == false {
+			chargingBsonM["onlineChargingChk"] = false
+			chargingBsonM["quota"] = 0
+			chargingBsonM["unitCost"] = ""
+		}
+		chargingBsonA = append(chargingBsonA, chargingBsonM)
+	}
+
+	if err := mongoapi.RestfulAPIDeleteMany(urrDataColl, filterUeIdOnly); err != nil {
+		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	}
+	if err := mongoapi.RestfulAPIPostMany(urrDataColl, filterUeIdOnly, chargingBsonA); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 
