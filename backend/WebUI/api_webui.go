@@ -22,9 +22,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 
+	"strconv"
+
 	"github.com/free5gc/CDRUtil/asn"
 	"github.com/free5gc/CDRUtil/cdrFile"
 	"github.com/free5gc/CDRUtil/cdrType"
+	"github.com/free5gc/TarrifUtil/tarrifType"
 	"github.com/free5gc/openapi/models"
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/logger"
@@ -42,7 +45,7 @@ const (
 	userDataColl     = "userData"
 	tenantDataColl   = "tenantData"
 	quotaDataColl    = "quotaData"
-	chargingDataColl      = "chargingData"
+	chargingDataColl = "chargingData"
 )
 
 var httpsClient *http.Client
@@ -898,6 +901,7 @@ func GetSubscriberByID(c *gin.Context) {
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
+	logger.WebUILog.Warnln("chargingDataInterface", chargingDataInterface)
 
 	var authSubsData models.AuthenticationSubscription
 	json.Unmarshal(mapToByte(authSubsDataInterface), &authSubsData)
@@ -915,6 +919,7 @@ func GetSubscriberByID(c *gin.Context) {
 	json.Unmarshal(sliceToByte(flowRuleDataInterface), &flowRules)
 	var chargingData []ChargingData
 	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
+	logger.WebUILog.Warnln("chargingData", chargingData)
 
 	for key, SnssaiData := range smPolicyData.SmPolicySnssaiData {
 		tmpSmPolicyDnnData := make(map[string]models.SmPolicyDnnData)
@@ -1143,6 +1148,31 @@ func PutSubscriberByID(c *gin.Context) {
 		chargingBsonM := toBsonM(urr)
 
 		chargingBsonM["ueId"] = ueId
+
+		// unitCost
+		unitCost := tarrifType.UnitCost{}
+		dotPos := strings.Index(urr.UnitCost, ".")
+		if dotPos == -1 {
+			unitCost.Exponent = 0
+			if digit, err := strconv.Atoi(urr.UnitCost); err == nil {
+				unitCost.ValueDigits = int64(digit)
+			}
+		} else {
+			if digit, err := strconv.Atoi(strings.Replace(urr.UnitCost, ".", "", -1)); err == nil {
+				unitCost.ValueDigits = int64(digit)
+			}
+			unitCost.Exponent = len(urr.UnitCost) - dotPos - 1
+		}
+
+		chargingBsonM["tarrif"] = tarrifType.CurrentTariff{
+			RateElement: &tarrifType.RateElement{
+				UnitCost: &unitCost,
+				CCUnitType: &tarrifType.CCUnitType{
+					Value: tarrifType.MONEY,
+				},
+			},
+		}
+
 		if urr.OnlineCharging == false {
 			chargingBsonM["onlineChargingChk"] = false
 			chargingBsonM["quota"] = 0
@@ -1343,45 +1373,45 @@ func PutQuota(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-func getRatingGroupIDBySupi(supi string) uint32 {
-	ratingGroupID, ok := SupiRatingGroupIDMap[supi]
-	if !ok {
+// func getRatingGroupIDBySupi(supi string) uint32 {
+// 	ratingGroupID, ok := SupiRatingGroupIDMap[supi]
+// 	if !ok {
 
-		fileName := supi + ".cdr"
-		webuiSelf := webui_context.WEBUI_Self()
-		ftpConn := webuiSelf.FtpServer
+// 		fileName := supi + ".cdr"
+// 		webuiSelf := webui_context.WEBUI_Self()
+// 		ftpConn := webuiSelf.FtpServer
 
-		r, err := ftpConn.Retr(fileName)
-		if err != nil {
-			panic(err)
-		}
-		defer r.Close()
-		cdr, err1 := ioutil.ReadAll(r)
+// 		r, err := ftpConn.Retr(fileName)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		defer r.Close()
+// 		cdr, err1 := ioutil.ReadAll(r)
 
-		if err1 != nil {
-			panic(err1)
-		}
+// 		if err1 != nil {
+// 			panic(err1)
+// 		}
 
-		newCdrFile := cdrFile.CDRFile{}
-		newCdrFile.DecodingBytes(cdr)
+// 		newCdrFile := cdrFile.CDRFile{}
+// 		newCdrFile.DecodingBytes(cdr)
 
-		recvByte := newCdrFile.CdrList[0].CdrByte
+// 		recvByte := newCdrFile.CdrList[0].CdrByte
 
-		val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
-		asn.UnmarshalWithParams(recvByte, val, "")
+// 		val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
+// 		asn.UnmarshalWithParams(recvByte, val, "")
 
-		chargingRecord := *(val.(*cdrType.ChargingRecord))
+// 		chargingRecord := *(val.(*cdrType.ChargingRecord))
 
-		for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
-			SupiRatingGroupIDMap[supi] = uint32(multipleUnitUsage.RatingGroup.Value)
-			ratingGroupID = uint32(multipleUnitUsage.RatingGroup.Value)
-			break
-		}
-	}
-	// logger.WebUILog.Error(supi, "ratingGroupID: ", ratingGroupID)
+// 		for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
+// 			SupiRatingGroupIDMap[supi] = uint32(multipleUnitUsage.RatingGroup.Value)
+// 			ratingGroupID = uint32(multipleUnitUsage.RatingGroup.Value)
+// 			break
+// 		}
+// 	}
+// 	// logger.WebUILog.Error(supi, "ratingGroupID: ", ratingGroupID)
 
-	return ratingGroupID
-}
+// 	return ratingGroupID
+// }
 
 func getQuotaBySupi(supi string, forNotify bool) uint32 {
 	// ratingGroupID := getRatingGroupIDBySupi(supi)
