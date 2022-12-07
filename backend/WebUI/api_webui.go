@@ -2,10 +2,10 @@ package WebUI
 
 import (
 	"crypto/tls"
-	"encoding/binary"
+	// "encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	// "io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -1175,7 +1175,7 @@ func PutSubscriberByID(c *gin.Context) {
 
 		if urr.OnlineCharging == false {
 			chargingBsonM["onlineChargingChk"] = false
-			chargingBsonM["quota"] = 0
+			chargingBsonM["quota"] = uint32(0)
 			chargingBsonM["unitCost"] = ""
 		}
 		chargingBsonA = append(chargingBsonA, chargingBsonM)
@@ -1320,8 +1320,6 @@ func DeleteSubscriberByID(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-var db_quota = int32(100)
-
 func GetQuota(c *gin.Context) {
 	setCorsHeader(c)
 
@@ -1414,6 +1412,17 @@ func PutQuota(c *gin.Context) {
 // }
 
 func getQuotaBySupi(supi string, forNotify bool) uint32 {
+	filter := bson.M{"ueId": supi}
+	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
+	if err != nil {
+		logger.WebUILog.Errorf("getQuotaBySupi err: %+v", err)
+	}
+	var chargingData []ChargingData
+	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
+
+	logger.WebUILog.Warnln("getQuotaBySupi: chargingData", chargingData)
+
+	
 	// ratingGroupID := getRatingGroupIDBySupi(supi)
 	// var quotafileName string
 	// if forNotify {
@@ -1438,8 +1447,11 @@ func getQuotaBySupi(supi string, forNotify bool) uint32 {
 	// 	panic(err)
 	// }
 	// quota := binary.BigEndian.Uint32(quotaBinary[:5])
-	quota := uint32(200)
-	return quota
+	if len(chargingData) > 0{
+		return uint32(chargingData[0].Quota)
+	} else {
+		return 0
+	}
 }
 
 func GetQuotaByID(c *gin.Context) {
@@ -1470,31 +1482,82 @@ func PutQuotaByID(c *gin.Context) {
 		})
 		return
 	}
-	// supi := c.Param("supi")
+	supi := c.Param("supi")
 
+	filter := bson.M{"ueId": supi}
+	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
+	if err != nil {
+		logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
+	}
+	var chargingData []ChargingData
+	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
+	logger.WebUILog.Warnln("chargingData", chargingData)
+	// chargingData[0].Quota = uint32(quotaData.Quota)
+
+	// chargingBsonA := make([]interface{}, 0, len(chargingData))
+
+	if len(chargingData) > 0 {
+		chargingBsonM := toBsonM(chargingData[0])
+		if chargingData[0].OnlineCharging == false {
+			chargingBsonM["onlineChargingChk"] = false
+			chargingBsonM["quota"] = uint32(0)
+			chargingBsonM["unitCost"] = ""
+		}
+		chargingBsonM["quota"] = uint32(quotaData.Quota)
+		logger.WebUILog.Warnln("chargingBsonM", chargingBsonM)
+
+		// chargingBsonA = append(chargingBsonA, chargingBsonM)
+		// if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filter); err != nil {
+		// 	logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
+		// }
+	
+		if _, err := mongoapi.RestfulAPIPost(chargingDataColl, filter, chargingBsonM); err != nil {
+			logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
+		}
+	}
+	// logger.WebUILog.Warnln("PutQuotaByID chargingBsonA", chargingBsonA)
+
+
+	webuiSelf := webui_context.WEBUI_Self()
+	webuiSelf.UpdateNfProfiles()
+
+	if chfUris := webuiSelf.GetOamUris(models.NfType_CHF); chfUris != nil {
+		requestUri := fmt.Sprintf("%s/nchf-convergedcharging/v3/recharging/%s", chfUris[0], supi)
+		_, err := http.NewRequest(http.MethodPut, requestUri, nil)
+		if err != nil {
+			logger.WebUILog.Error(err)
+		}
+
+		// resp, err := httpsClient.P (requestUri)
+		// if err != nil {
+		// 	logger.WebUILog.Error(err)
+		// 	c.JSON(http.StatusInternalServerError, gin.H{})
+		// 	return
+		// }
+	}
 	// ratingGroupID := getRatingGroupIDBySupi(supi)
 
 	// quotafileName := "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
-	quotafileName := "/tmp/quota/1.quota"
+	// quotafileName := "/tmp/quota/1.quota"
 
-	quotaBinary := make([]byte, 4)
-	binary.BigEndian.PutUint32(quotaBinary, uint32(quotaData.Quota))
+	// quotaBinary := make([]byte, 4)
+	// binary.BigEndian.PutUint32(quotaBinary, uint32(quotaData.Quota))
 
-	err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
-	if err != nil {
-		panic(err)
-	}
+	// err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	q, _ := ioutil.ReadFile(quotafileName)
+	// q, _ := ioutil.ReadFile(quotafileName)
 
-	quota := binary.BigEndian.Uint32(q[:5])
+	// quota := binary.BigEndian.Uint32(q[:5])
 
-	// quota := binary.BigEndian.PutUint32(q)
-	if err != nil {
-		panic(err)
-	}
+	// // quota := binary.BigEndian.PutUint32(q)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	logger.WebUILog.Error("quota", quota)
+	logger.WebUILog.Error("supi", supi)
 
 	c.JSON(http.StatusNoContent, gin.H{})
 }
