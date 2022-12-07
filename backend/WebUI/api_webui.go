@@ -1521,20 +1521,34 @@ func PutQuotaByID(c *gin.Context) {
 	webuiSelf := webui_context.WEBUI_Self()
 	webuiSelf.UpdateNfProfiles()
 
-	if chfUris := webuiSelf.GetOamUris(models.NfType_CHF); chfUris != nil {
-		requestUri := fmt.Sprintf("%s/nchf-convergedcharging/v3/recharging/%s", chfUris[0], supi)
-		_, err := http.NewRequest(http.MethodPut, requestUri, nil)
-		if err != nil {
-			logger.WebUILog.Error(err)
-		}
-
-		// resp, err := httpsClient.P (requestUri)
-		// if err != nil {
-		// 	logger.WebUILog.Error(err)
-		// 	c.JSON(http.StatusInternalServerError, gin.H{})
-		// 	return
-		// }
+	requestUri := fmt.Sprintf("%s/nchf-convergedcharging/v3/recharging/%s", "http://127.0.0.113:8000", supi)
+	logger.WebUILog.Warnln("requestUri", requestUri)
+	req, err := http.NewRequest(http.MethodPut, requestUri, nil)
+	if err != nil {
+		logger.WebUILog.Error(err)
 	}
+	req.Header.Add("Content-Type", "application/json")
+ 
+	_, _ = http.DefaultClient.Do(req)
+ 
+	// defer res.Body.Close()
+
+
+	// if chfUris := webuiSelf.GetOamUris(models.NfType_CHF); chfUris != nil {
+	// 	requestUri := fmt.Sprintf("%s/nchf-convergedcharging/v3/recharging/%s", chfUris[0], supi)
+	// 	logger.WebUILog.Warnln("requestUri", requestUri)
+	// 	_, err := http.NewRequest(http.MethodPut, requestUri, nil)
+	// 	if err != nil {
+	// 		logger.WebUILog.Error(err)
+	// 	}
+
+	// 	// resp, err := httpsClient.P (requestUri)
+	// 	// if err != nil {
+	// 	// 	logger.WebUILog.Error(err)
+	// 	// 	c.JSON(http.StatusInternalServerError, gin.H{})
+	// 	// 	return
+	// 	// }
+	// }
 	// ratingGroupID := getRatingGroupIDBySupi(supi)
 
 	// quotafileName := "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
