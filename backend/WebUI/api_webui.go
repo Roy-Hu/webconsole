@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	ftpServer "github.com/free5gc/webconsole/backend/ftp"
-
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
@@ -1590,13 +1588,20 @@ func GetRandomNumber(c *gin.Context) {
 }
 
 func recvChargingRecord(supi string) (total_cnt int64, ul_cnt int64, dl_cnt int64) {
-	fileName := supi + ".cdr"
+	fileName := "/tmp/webconsole/" + supi + ".cdr"
+	// webuiSelf := webui_context.WEBUI_Self()
 
-	cdr, err := ftpServer.FTPRetrv(fileName)
+	// c, err := ftpServer.FTPLogin()
+	// if err != nil {
+	// 	logger.WebUILog.Warn("Fail to Login", fileName)
+	// 	panic(err)
+	// }
 
+	// cdr, err := ftpServer.FTPRetrv(c, fileName)
+	cdr, err := os.ReadFile(fileName)
 	if err != nil {
 		logger.WebUILog.Warn("Fail to retrv file: ", fileName)
-		panic(err)
+		return 0, 0, 0
 	}
 
 	logger.WebUILog.Warn("Retr CDR success")

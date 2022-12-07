@@ -7,6 +7,7 @@ import (
 	timedecode "github.com/free5gc/util/mapstruct"
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/logger"
+	"github.com/jlaffaye/ftp"
 )
 
 var webuiContext = WEBUIContext{}
@@ -14,6 +15,7 @@ var webuiContext = WEBUIContext{}
 type WEBUIContext struct {
 	NFProfiles     []models.NfProfile
 	NFOamInstances []NfOamInstance
+	FtpConn        *ftp.ServerConn
 }
 
 type NfOamInstance struct {

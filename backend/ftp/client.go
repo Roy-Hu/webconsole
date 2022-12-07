@@ -1,4 +1,4 @@
-package ftpServer
+package ftp
 
 import (
 	"io/ioutil"
@@ -8,7 +8,7 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-func FTPRetrv(fileName string) ([]byte, error) {
+func FTPLogin() (*ftp.ServerConn, error) {
 	// FTP server is for CDR transfer
 	var c *ftp.ServerConn
 
@@ -23,7 +23,10 @@ func FTPRetrv(fileName string) ([]byte, error) {
 	}
 
 	logger.FtpLog.Info("Login FTP server")
+	return c, err
+}
 
+func FTPRetrv(c *ftp.ServerConn, fileName string) ([]byte, error) {
 	r, err := c.Retr(fileName)
 	if err != nil {
 		logger.WebUILog.Warn("Fail to retrv file: ", fileName)
