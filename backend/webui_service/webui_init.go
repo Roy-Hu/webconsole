@@ -8,6 +8,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/free5gc/webconsole/backend/ftp"
+
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/WebUI"
 	"github.com/free5gc/webconsole/backend/factory"
@@ -147,9 +149,13 @@ func (webui *WEBUI) Start() {
 
 	self := webui_context.WEBUI_Self()
 	self.UpdateNfProfiles()
+	self.FtpConn, _ = ftp.FTPLogin()
 
 	router.NoRoute(ReturnPublic())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 
+	ftp.OpenServer(&wg)
 	initLog.Infoln(router.Run(":5000"))
 }
 
@@ -168,7 +174,10 @@ func (webui *WEBUI) Exec(c *cli.Context) error {
 		initLog.Fatalln(err)
 	}
 	wg := sync.WaitGroup{}
-	wg.Add(3)
+	wg.Add(4)
+
+	ftp.OpenServer(&wg)
+
 	go func() {
 		defer func() {
 			if p := recover(); p != nil {
