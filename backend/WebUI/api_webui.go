@@ -1129,10 +1129,9 @@ func PutSubscriberByID(c *gin.Context) {
 		flowRuleBsonM["ueId"] = ueId
 		flowRuleBsonM["servingPlmnId"] = servingPlmnId
 		flowRuleBsonM["Online"] = flowRule.ChargingData.OnlineCharging
-		flowRuleBsonM["Online"] = flowRule.ChargingData.OfflineCharging
+		flowRuleBsonM["Offline"] = flowRule.ChargingData.OfflineCharging
 		flowRuleBsonM["ratingGroup"] = flowRule.ChargingData.RatingGroup
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
-		logger.WebUILog.Warnln("flowRuleBsonM", flowRuleBsonM)
 	}
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
@@ -1143,8 +1142,6 @@ func PutSubscriberByID(c *gin.Context) {
 	}
 
 	// charging
-	logger.WebUILog.Warnln("subsData.URRs:", subsData.ChargingData)
-
 	chargingBsonA := make([]interface{}, 0, len(subsData.ChargingData))
 	for _, urr := range subsData.ChargingData {
 		chargingBsonM := toBsonM(urr)
@@ -1493,7 +1490,6 @@ func PutQuotaByID(c *gin.Context) {
 	}
 	var chargingData []ChargingData
 	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
-	logger.WebUILog.Warnln("chargingData", chargingData)
 	// chargingData[0].Quota = uint32(quotaData.Quota)
 
 	// chargingBsonA := make([]interface{}, 0, len(chargingData))
