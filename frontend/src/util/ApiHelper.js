@@ -55,6 +55,7 @@ class ApiHelper {
   }
 
   static async updateSubscriber(subscriberData) {
+    console.log("updateSubscriber", subscriberData)
     try {
       let response = await Http.put(
         `subscriber/${subscriberData["ueId"]}/${subscriberData["plmnID"]}`, subscriberData);

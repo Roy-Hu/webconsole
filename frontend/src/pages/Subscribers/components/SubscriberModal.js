@@ -130,7 +130,8 @@ function sliceConfigurationsFromSubscriber(subscriber) {
             gbrUL: rule.gbrUL,
             gbrDL: rule.gbrDL,
             mbrUL: rule.mbrUL,
-            mbrDL: rule.mbrDL  
+            mbrDL: rule.mbrDL,
+            charging: rule.charging
           }
         })
       }

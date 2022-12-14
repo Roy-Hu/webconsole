@@ -1128,7 +1128,11 @@ func PutSubscriberByID(c *gin.Context) {
 		flowRuleBsonM := toBsonM(flowRule)
 		flowRuleBsonM["ueId"] = ueId
 		flowRuleBsonM["servingPlmnId"] = servingPlmnId
+		flowRuleBsonM["Online"] = flowRule.ChargingData.OnlineCharging
+		flowRuleBsonM["Online"] = flowRule.ChargingData.OfflineCharging
+		flowRuleBsonM["ratingGroup"] = flowRule.ChargingData.RatingGroup
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
+		logger.WebUILog.Warnln("flowRuleBsonM", flowRuleBsonM)
 	}
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
