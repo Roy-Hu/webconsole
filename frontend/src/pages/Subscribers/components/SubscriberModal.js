@@ -439,6 +439,10 @@ class SubscriberModal extends Component {
             $ref: "#/definitions/bitRate",
             title: "Downlink MBR",
           },
+          charging: {
+            $ref: "#/definitions/chargingData",
+            title: "Charging",
+          }
         }
       },
       IPFilter: {
@@ -525,6 +529,41 @@ class SubscriberModal extends Component {
           },
         }
       },
+      chargingData: {
+        type: "object",
+        title: "Charging",
+        properties: {
+          ratingGroup: {
+            type: "integer",
+            title: "Rating Group",
+            default: 1,
+            maximum: 2000000000,
+            minimum: 1
+          },
+          onlineChargingChk: {
+            type: "boolean",
+            title: "Online Charging",
+            default: false
+          },
+          offlineChargingChk: {
+            type: "boolean",
+            title: "Offline Charging",
+            default: false
+          },
+          meteringMethodSelect: {
+            type: "string",
+            title: "Metering Method",
+            enum: ["Volume", "DURATION", "DURATION_VOLUME", "EVENT"],
+            default: "Volume",
+          },
+          reportingLevel: {
+            type: "string",
+            title: "Reporting Level",
+            enum: ["Service Id", "Rating Group", "Sponsored Data Connectivity"],
+            default: "Rating Group",
+          }
+        }
+      }
     },
   };
 
