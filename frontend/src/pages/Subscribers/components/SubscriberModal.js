@@ -300,6 +300,7 @@ class SubscriberModal extends Component {
         type: "array",
         title: "Charging Configurations",
         items: { $ref: "#/definitions/chargingConfiguration" },
+        maxItems: 1,
         default: [
         ],
       },
@@ -367,7 +368,7 @@ class SubscriberModal extends Component {
           flowRules: {
             type: "array",
             items: { $ref: "#/definitions/FlowInformation" },
-            maxItems: 1,
+            maxItems: 3,
             title: "Flow Rules"
           },
           upSecurityChk: {
@@ -550,6 +551,12 @@ class SubscriberModal extends Component {
             type: "boolean",
             title: "Offline Charging",
             default: false
+          },
+          unitCost: {
+            type: "string",
+            title: "Unit cost (money per byte)",
+            pattern: "^[0-9]+(\\.[0-9]+)?",
+            default: "1"
           },
           meteringMethodSelect: {
             type: "string",

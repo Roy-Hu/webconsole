@@ -6,34 +6,6 @@ import { connect } from "react-redux";
 import UEInfoApiHelper from "../../util/UEInfoApiHelper";
 import RatinggroupQuotaModal from "./components/RatinggroupQuotaModal";
 import ApiHelper from "../../util/ApiHelper";
-import { flatMap } from "lodash";
-// import Pagination from "react-bootstrap/Pagination";
-// import paginationFactory from 'react-bootstrap-table2-paginator';
-
-// eslint-disable-next-line no-unused-vars
-var products = [
-  {
-    supi: "imsi-2089300007487",
-    status: "CONNECTED",
-  },
-  {
-    supi: "imsi-2089300007488",
-    status: "IDLE",
-  },
-  {
-    supi: "imsi-2089300007489",
-    status: "CONNECTED",
-  },
-  {
-    supi: "imsi-2089300007485",
-    status: "IDLE",
-  },
-  {
-    supi: "imsi-2089300007484",
-    status: "CONNECTED",
-  },
-];
-// It's a data format example.
 
 class DetailButton extends Component {
   constructor(props) {

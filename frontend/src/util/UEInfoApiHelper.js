@@ -114,31 +114,6 @@ class UeInfoApiHelper {
     return false;
   }
 
-  static async fetchUEInfoDetailRandomNumber() {
-    try {
-      let url = `random-number`
-      // console.log("Making request to ", url, " ....")
-
-      let response = await Http.get(url);
-      if (response.status === 200 && response.data) {    
-        // console.log(response.data.RandomValue)   
-        // let ue_context = response.data[0]
-        // store.dispatch(ueinfoActions.setUEInfoDetailAMF(ue_context));
-
-        // let smContextRef = ue_context.PduSessions[0].SmContextRef
-
-        return response.data.RandomValue;
-      } else {
-        console.log("Request failed, url:", url)
-        console.log("Response: ", response.status, response.data)
-      }
-    } catch (error) {
-        console.log(error)
-    }
-
-    return 0;
-  }
-
   static async fetchUEInfoDetailChargingRecord(supi) {
     try {
       let url = `charging-record/${supi}`
@@ -162,7 +137,7 @@ class UeInfoApiHelper {
     const MSG_FETCH_ERROR = "Error fetching registered UEs. Is the core network up?";
 
     try {
-      let url =  "registered-ue-context"
+      let url =  "charging-record"
       // console.log("Making request to ", url, " ....")
       let user = LocalStorageHelper.getUserInfo();
       axios.defaults.headers.common['Token'] = user.accessToken;
@@ -170,20 +145,21 @@ class UeInfoApiHelper {
       if (response.status === 200) {
         let registered_users = [];
         if (response.data) {
+          // console.log("ue_context", ue_context)
           registered_users = response.data.map(ue_context =>
-            new UEInfoWithCR(ue_context.Supi, ue_context.CmState)
+            new UEInfoWithCR(ue_context.Supi, ue_context.CmState, ue_context.DataTotalVolume, ue_context.DataVolumeUplink, ue_context.DataVolumeDownlink, ue_context.quotaLeft)
             );
 
           // registered_users.forEach(function(item, i) {
-          for (let i = 0; i < registered_users.length; i++) {
-            const item = registered_users[i];
-            let charginrecord = await this.fetchUEInfoDetailChargingRecord(item.supi);
-            // console.log("charginrecord", charginrecord)
-            registered_users[i].totalVol = charginrecord.DataTotalVolume
-            registered_users[i].ulVol = charginrecord.DataVolumeUplink
-            registered_users[i].dlVol = charginrecord.DataVolumeDownlink
-            registered_users[i].quotaLeft = charginrecord.quotaLeft
-          };
+          // for (let i = 0; i < registered_users.length; i++) {
+          //   const item = registered_users[i];
+          //   let charginrecord = await this.fetchUEInfoDetailChargingRecord(item.supi);
+          //   // console.log("charginrecord", charginrecord)
+          //   registered_users[i].totalVol = charginrecord.DataTotalVolume
+          //   registered_users[i].ulVol = charginrecord.DataVolumeUplink
+          //   registered_users[i].dlVol = charginrecord.DataVolumeDownlink
+          //   registered_users[i].quotaLeft = charginrecord.quotaLeft
+          // };
           // console.log("registered_users:", registered_users)
           // totalVoltotalVol charginrecord.DataTotalVolume, 
           //   charginrecord.DataVolumeUplink, 

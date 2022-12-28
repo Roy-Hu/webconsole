@@ -24,6 +24,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/free5gc/CDRUtil v0.0.0 => /home/free5gc/CDRUtil
+replace github.com/free5gc/CDRUtil v0.0.0 => /home/uduck/CDRUtil
 
-replace github.com/free5gc/TarrifUtil v0.0.0 => /home/free5gc/TarrifUtil
+replace github.com/free5gc/TarrifUtil v0.0.0 => /home/uduck/TarrifUtil

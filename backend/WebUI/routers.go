@@ -236,16 +236,9 @@ var routes = Routes{
 	},
 
 	{
-		"Random Number",
-		http.MethodGet,
-		"/random-number",
-		GetRandomNumber,
-	},
-
-	{
 		"Charging Record",
 		http.MethodGet,
-		"/charging-record/:supi",
+		"/charging-record",
 		GetChargingRecord,
 	},
 }

@@ -303,14 +303,6 @@ class UEInfoDetail extends Component {
     }
 
     componentDidMount() {
-        setInterval( async () => {
-            let randval = await UEInfoApiHelper.fetchUEInfoDetailRandomNumber();
-
-            this.setState({
-                randomVal: randval
-            })
-        },1000)
-
         this.interval = setInterval( async () => {
             let charginrecord = await UEInfoApiHelper.fetchUEInfoDetailChargingRecord(this.props.amfInfo.Supi);
 
