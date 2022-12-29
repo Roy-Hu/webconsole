@@ -896,7 +896,7 @@ func GetSubscriberByID(c *gin.Context) {
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
-	filterCharging := bson.M{"ueId": ueId, "ratingGroup": 0}
+	filterCharging := bson.M{"ueId": ueId, "ratingGroup": 1}
 	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filterCharging)
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
@@ -1193,7 +1193,7 @@ func PutSubscriberByID(c *gin.Context) {
 		chargingBsonM := toBsonM(urr)
 
 		chargingBsonM["ueId"] = ueId
-		chargingBsonM["ratingGroup"] = 0
+		chargingBsonM["ratingGroup"] = 1
 
 		// unitCost
 		unitCost := tarrifType.UnitCost{}
@@ -1225,7 +1225,7 @@ func PutSubscriberByID(c *gin.Context) {
 			chargingBsonM["unitCost"] = ""
 		}
 
-		filterDefault := bson.M{"ueId": ueId, "ratingGroup": 0}
+		filterDefault := bson.M{"ueId": ueId, "ratingGroup": 1}
 		if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterDefault); err != nil {
 			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 		}
@@ -1233,14 +1233,6 @@ func PutSubscriberByID(c *gin.Context) {
 			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 		}
 	}
-
-	// test
-	filter = bson.M{"ueId": ueId, "ratingGroup": 1}
-	chargingInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filter)
-	if err != nil {
-		logger.WebUILog.Errorf("Get quota error: %+v", err)
-	}
-	logger.WebUILog.Warnln("[Test] chargingInterface:", chargingInterface)
 
 	if _, err := mongoapi.RestfulAPIPutOne(authSubsDataColl, filterUeIdOnly, authSubsBsonM); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
@@ -1426,7 +1418,7 @@ func PutQuota(c *gin.Context) {
 }
 
 func getQuotaBySupi(supi string, forNotify bool) uint32 {
-	filter := bson.M{"ueId": supi}
+	filter := bson.M{"ueId": supi, "ratingGroup": 1}
 	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
 	if err != nil {
 		logger.WebUILog.Errorf("getQuotaBySupi err: %+v", err)

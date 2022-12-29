@@ -24,6 +24,9 @@ func OpenServer(wg *sync.WaitGroup) *FTPServer {
 	var autoCreate bool
 
 	f := &FTPServer{}
+	if _, err := os.Stat("/tmp/webconsole"); err != nil {
+		os.Mkdir("/tmp/webconsole", os.ModePerm)
+	}
 
 	if confFile == "" {
 		confFile = "/tmp/webconsole/ftpserver.json"
