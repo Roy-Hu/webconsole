@@ -919,7 +919,6 @@ func GetSubscriberByID(c *gin.Context) {
 	json.Unmarshal(sliceToByte(flowRuleDataInterface), &flowRules)
 	var chargingData []ChargingData
 	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
-	logger.WebUILog.Warnln("chargingData", chargingData)
 
 	for key, SnssaiData := range smPolicyData.SmPolicySnssaiData {
 		tmpSmPolicyDnnData := make(map[string]models.SmPolicyDnnData)
@@ -1134,7 +1133,6 @@ func PutSubscriberByID(c *gin.Context) {
 		flowRuleBsonM["Online"] = flowRule.ChargingData.OnlineCharging
 		flowRuleBsonM["Offline"] = flowRule.ChargingData.OfflineCharging
 		flowRuleBsonM["ratingGroup"] = flowRule.ChargingData.RatingGroup
-		logger.WebUILog.Warnln("unicost:", flowRule.ChargingData.UnitCost, "rg:", flowRule.ChargingData.RatingGroup)
 		// unitCost
 		unitCost := tarrifType.UnitCost{}
 		dotPos := strings.Index(flowRule.ChargingData.UnitCost, ".")
@@ -1163,13 +1161,8 @@ func PutSubscriberByID(c *gin.Context) {
 			},
 		}
 
-		logger.WebUILog.Warnln("flowRuleBsonM", flowRuleBsonM)
-
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
 		chargingBsonA = append(chargingBsonA, chargingBsonM)
-		// if _, err := mongoapi.RestfulAPIPost(chargingDataColl, bson.M{"ueId": ueId, "ratingGroup": flowRule.ChargingData.RatingGroup}, chargingBsonM); err != nil {
-		// 	logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-		// }
 	}
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
@@ -1184,8 +1177,6 @@ func PutSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, chargingBsonA); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
-
-	logger.WebUILog.Warnln("subsData.ChargingData", subsData.ChargingData)
 
 	// charging 
 	if subsData.ChargingData != nil && len(subsData.ChargingData) > 0 {
@@ -1362,62 +1353,15 @@ func DeleteSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIDeleteOne(smPolicyDataColl, filterUeIdOnly); err != nil {
 		logger.WebUILog.Errorf("DeleteSubscriberByID err: %+v", err)
 	}
-
-	c.JSON(http.StatusNoContent, gin.H{})
-}
-
-func GetQuota(c *gin.Context) {
-	setCorsHeader(c)
-
-	fmt.Println("Get Quota")
-
-	var quotaData QuotaData
-	filter := bson.M{"id": 1}
-
-	authSubsDataInterface, err := mongoapi.RestfulAPIGetOne(quotaDataColl, filter)
-	if err != nil {
-		logger.WebUILog.Errorf("GetQuota err: %+v", err)
-	}
-
-	// var authSubsData models.AuthenticationSubscription
-	json.Unmarshal(mapToByte(authSubsDataInterface), &quotaData)
-
-	// quotaData := QuotaData{Quota: db_quota}
-
-	c.JSON(http.StatusOK, quotaData)
-}
-
-func PutQuota(c *gin.Context) {
-	setCorsHeader(c)
-	logger.WebUILog.Infoln("Put One Quota Data")
-
-	var quotaData QuotaData
-
-	if err := c.ShouldBindJSON(&quotaData); err != nil {
-		logger.WebUILog.Errorf("PutQuota err: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"cause": "JSON format incorrect",
-		})
-		return
-	}
-
-	filter := bson.M{"id": 1}
-
-	// quotaBsonM := toBsonM(quotaData.Quota)
-
-	quotaDataBsonM := bson.M{"id": 1, "quota": quotaData.Quota}
-
-	// fmt.Println("quotaData.Quota", quotaData.Quota)
-	// db_quota = quotaData.Quota
-
-	if _, err := mongoapi.RestfulAPIPutOne(quotaDataColl, filter, quotaDataBsonM); err != nil {
-		logger.WebUILog.Errorf("PutQuota err: %+v", err)
+	if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
+		logger.WebUILog.Errorf("DeleteSubscriberByID err: %+v", err)
 	}
 
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-func getQuotaBySupi(supi string, forNotify bool) uint32 {
+// util function 
+func getQuotaBySupi(supi string) uint32 {
 	filter := bson.M{"ueId": supi, "ratingGroup": 1}
 	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
 	if err != nil {
@@ -1426,32 +1370,6 @@ func getQuotaBySupi(supi string, forNotify bool) uint32 {
 	var chargingData []ChargingData
 	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
 
-	// logger.WebUILog.Warnln("getQuotaBySupi: chargingData", chargingData)
-
-	// ratingGroupID := getRatingGroupIDBySupi(supi)
-	// var quotafileName string
-	// if forNotify {
-	// 	quotafileName = "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
-	// } else {
-	// 	quotafileName = "/tmp/quota_webconsole/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
-	// }
-
-	// if _, err := os.Stat(quotafileName); errors.Is(err, os.ErrNotExist) {
-	// 	// quota file does not exist
-	// 	quotaBinary := make([]byte, 4)
-	// 	binary.BigEndian.PutUint32(quotaBinary, uint32(1000000))
-
-	// 	err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
-
-	// quotaBinary, err := ioutil.ReadFile(quotafileName)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// quota := binary.BigEndian.Uint32(quotaBinary[:5])
 	if len(chargingData) > 0 {
 		return uint32(chargingData[0].Quota)
 	} else {
@@ -1459,6 +1377,7 @@ func getQuotaBySupi(supi string, forNotify bool) uint32 {
 	}
 }
 
+// for recharge
 func GetQuotaByID(c *gin.Context) {
 	setCorsHeader(c)
 
@@ -1466,7 +1385,7 @@ func GetQuotaByID(c *gin.Context) {
 
 	supi, _ := c.Params.Get("supi")
 
-	quota := getQuotaBySupi(supi, true)
+	quota := getQuotaBySupi(supi)
 
 	c.JSON(http.StatusOK, gin.H{
 		"supi":  supi,
@@ -1474,6 +1393,7 @@ func GetQuotaByID(c *gin.Context) {
 	})
 }
 
+// for recharge
 func PutQuotaByID(c *gin.Context) {
 	setCorsHeader(c)
 	logger.WebUILog.Infoln("Put Quota Data by ID")
@@ -1489,92 +1409,49 @@ func PutQuotaByID(c *gin.Context) {
 	}
 	supi := c.Param("supi")
 
-	filter := bson.M{"ueId": supi}
-	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
+	filterDefault := bson.M{"ueId": supi, "ratingGroup": 1}
+	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filterDefault)
 	if err != nil {
 		logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
 	}
+
 	var chargingData []ChargingData
 	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
-	// chargingData[0].Quota = uint32(quotaData.Quota)
 
-	// chargingBsonA := make([]interface{}, 0, len(chargingData))
+	logger.WebUILog.Warnln("chargingData: ", chargingData)
 
 	if len(chargingData) > 0 {
 		chargingBsonM := toBsonM(chargingData[0])
 		if !chargingData[0].OnlineCharging {
-			chargingBsonM["ratingGroup"] = 0
+			chargingBsonM["ratingGroup"] = 1
 			chargingBsonM["onlineChargingChk"] = false
 			chargingBsonM["quota"] = uint32(0)
 			chargingBsonM["unitCost"] = ""
 		}
 		chargingBsonM["quota"] = uint32(quotaData.Quota)
+		chargingBsonM["ratingGroup"] = 1
+
 		logger.WebUILog.Warnln("chargingBsonM", chargingBsonM)
 
-		// chargingBsonA = append(chargingBsonA, chargingBsonM)
-		// if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filter); err != nil {
-		// 	logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
-		// }
-
-		if _, err := mongoapi.RestfulAPIPost(chargingDataColl, filter, chargingBsonM); err != nil {
+		if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterDefault, chargingBsonM); err != nil {
 			logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
 		}
 	}
-	// logger.WebUILog.Warnln("PutQuotaByID chargingBsonA", chargingBsonA)
 
+	// call recharge server
 	webuiSelf := webui_context.WEBUI_Self()
 	webuiSelf.UpdateNfProfiles()
 
 	requestUri := fmt.Sprintf("%s/nchf-convergedcharging/v3/recharging/%s", "http://127.0.0.113:8000", supi)
-	logger.WebUILog.Warnln("requestUri", requestUri)
 	req, err := http.NewRequest(http.MethodPut, requestUri, nil)
 	if err != nil {
 		logger.WebUILog.Error(err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	_, _ = http.DefaultClient.Do(req)
-
-	// defer res.Body.Close()
-
-	// if chfUris := webuiSelf.GetOamUris(models.NfType_CHF); chfUris != nil {
-	// 	requestUri := fmt.Sprintf("%s/nchf-convergedcharging/v3/recharging/%s", chfUris[0], supi)
-	// 	logger.WebUILog.Warnln("requestUri", requestUri)
-	// 	_, err := http.NewRequest(http.MethodPut, requestUri, nil)
-	// 	if err != nil {
-	// 		logger.WebUILog.Error(err)
-	// 	}
-
-	// 	// resp, err := httpsClient.P (requestUri)
-	// 	// if err != nil {
-	// 	// 	logger.WebUILog.Error(err)
-	// 	// 	c.JSON(http.StatusInternalServerError, gin.H{})
-	// 	// 	return
-	// 	// }
-	// }
-	// ratingGroupID := getRatingGroupIDBySupi(supi)
-
-	// quotafileName := "/tmp/quota/" + strconv.Itoa(int(ratingGroupID)) + ".quota"
-	// quotafileName := "/tmp/quota/1.quota"
-
-	// quotaBinary := make([]byte, 4)
-	// binary.BigEndian.PutUint32(quotaBinary, uint32(quotaData.Quota))
-
-	// err := ioutil.WriteFile(quotafileName, quotaBinary, 0666)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// q, _ := ioutil.ReadFile(quotafileName)
-
-	// quota := binary.BigEndian.Uint32(q[:5])
-
-	// // quota := binary.BigEndian.PutUint32(q)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	logger.WebUILog.Error("supi", supi)
+	if _, err = http.DefaultClient.Do(req); err != nil {
+		logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
+	}
 
 	c.JSON(http.StatusNoContent, gin.H{})
 }
@@ -1660,6 +1537,7 @@ func GetUEPDUSessionInfo(c *gin.Context) {
 	}
 }
 
+// Get vol from CDR
 func parseCDR(supi string) (totalVol int64, ulVol int64, dlVol int64) {
 	fileName := "/tmp/webconsole/" + supi + ".cdr"
 	cdr, err := os.ReadFile(fileName)
@@ -1726,22 +1604,22 @@ func GetChargingRecord(c *gin.Context) {
 
 	// build charging records
 	uesBsonA := toBsonA(uesJsonData)
-	chargingRecordBsonA := make([]interface{}, 0, len(uesBsonA))
+	chargingRecordsBsonA := make([]interface{}, 0, len(uesBsonA))
 
 	for _, ueData := range uesBsonA {
 		ueBsonM := toBsonM(ueData)
 		supi := ueBsonM["Supi"].(string)
 		totalVol, ulVol, dlVol := parseCDR(supi)
 
-		chargingRecordBsonA = append(chargingRecordBsonA, bson.M{
+		chargingRecordsBsonA = append(chargingRecordsBsonA, bson.M{
 			"Supi":               supi,
 			"CmState":            ueBsonM["CmState"].(string),
 			"DataTotalVolume":    totalVol,
 			"DataVolumeUplink":   ulVol,
 			"DataVolumeDownlink": dlVol,
-			"quotaLeft":          int32(getQuotaBySupi(supi, false)),
+			"quotaLeft":          int32(getQuotaBySupi(supi)),
 		})
 	}
 
-	c.JSON(http.StatusOK, chargingRecordBsonA)
+	c.JSON(http.StatusOK, chargingRecordsBsonA)
 }

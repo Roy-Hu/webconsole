@@ -187,34 +187,6 @@ var routes = Routes{
 	},
 
 	{
-		"GetQuota",
-		http.MethodGet,
-		"/quota",
-		GetQuota,
-	},
-
-	{
-		"PutQuota",
-		http.MethodPut,
-		"/quota",
-		PutQuota,
-	},
-
-	{
-		"GetQuotaByID",
-		http.MethodGet,
-		"/quota/:supi",
-		GetQuotaByID,
-	},
-
-	{
-		"PutQuotaByID",
-		http.MethodPut,
-		"/quota/:supi",
-		PutQuotaByID,
-	},
-
-	{
 		"Registered UE Context",
 		http.MethodGet,
 		"/registered-ue-context",
@@ -240,5 +212,19 @@ var routes = Routes{
 		http.MethodGet,
 		"/charging-record",
 		GetChargingRecord,
+	},
+
+	{
+		"GetQuotaByID",
+		http.MethodGet,
+		"/quota/:supi",
+		GetQuotaByID,
+	},
+
+	{
+		"PutQuotaByID",
+		http.MethodPut,
+		"/quota/:supi",
+		PutQuotaByID,
 	},
 }
