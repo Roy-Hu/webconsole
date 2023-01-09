@@ -1132,7 +1132,6 @@ func PutSubscriberByID(c *gin.Context) {
 		flowRuleBsonM["servingPlmnId"] = servingPlmnId
 		flowRuleBsonM["Online"] = flowRule.ChargingData.OnlineCharging
 		flowRuleBsonM["Offline"] = flowRule.ChargingData.OfflineCharging
-		flowRuleBsonM["ratingGroup"] = flowRule.ChargingData.RatingGroup
 		// unitCost
 		unitCost := tarrifType.UnitCost{}
 		dotPos := strings.Index(flowRule.ChargingData.UnitCost, ".")
@@ -1178,7 +1177,7 @@ func PutSubscriberByID(c *gin.Context) {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 
-	// charging 
+	// charging: for default flow
 	if subsData.ChargingData != nil && len(subsData.ChargingData) > 0 {
 		urr := subsData.ChargingData[0]
 		chargingBsonM := toBsonM(urr)
@@ -1210,17 +1209,8 @@ func PutSubscriberByID(c *gin.Context) {
 			},
 		}
 
-		if !urr.OnlineCharging {
-			chargingBsonM["onlineChargingChk"] = false
-			chargingBsonM["quota"] = uint32(0)
-			chargingBsonM["unitCost"] = ""
-		}
-
 		filterDefault := bson.M{"ueId": ueId, "ratingGroup": 1}
-		if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterDefault); err != nil {
-			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-		}
-		if _, err := mongoapi.RestfulAPIPost(chargingDataColl, filterDefault, chargingBsonM); err != nil {
+		if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterDefault, chargingBsonM); err != nil {
 			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 		}
 	}

@@ -454,82 +454,24 @@ class SubscriberModal extends Component {
         type: "string",
         pattern: "^[0-9]+(\\.[0-9]+)? (bps|Kbps|Mbps|Gbps|Tbps)$"
       },
-      chargingConfiguration: {
+      chargingConfiguration: { // TODO: delete
         type: "object",
         title: "Charging",
         properties: {
-          // authenticationMethod: {
-          //   type: "string",
-          //   title: "URR type",
-          //   default: "Charging",
-          //   enum: ["Charging", "Monitor"],
-          // },
-          // totalVolume: {
-          //   type: "integer",
-          //   title: "Total Volume Threshold",
-          //   minimum: 0,
-          //   maximum: 1000000000,
-          // },
-          // uplinkVolume: {
-          //   type: "integer",
-          //   title: "Uplink Volume",
-          //   minimum: 0,
-          //   maximum: 1000000000,
-          // },
-          // downlinkVolume: {
-          //   type: "integer",
-          //   title: "Downlink Volume",
-          //   minimum: 0,
-          //   maximum: 1000000000,
-          // },
-          onlineChargingChk: {
-            type: "boolean",
-            title: "Online Charging",
-            default: false
+          quota: {
+            type: "integer",
+            title: "Quota (monetary)",
+            default: 5000,
+            maximum: 2000000000,
+            minimum: 1
           },
+          unitCost: {
+            type: "string",
+            title: "Unit cost (money per byte)",
+            pattern: "^[0-9]+(\\.[0-9]+)?",
+            default: "1"
+          },   
         },
-        "dependencies": {
-          onlineChargingChk: {
-            "oneOf": [
-              {
-                "properties": {
-                  onlineChargingChk: {
-                    "enum": [false]
-                  }
-                },
-              },
-              {
-                "properties": {
-                  onlineChargingChk: {
-                    "enum": [true]
-                  },
-                  quota: {
-                    type: "integer",
-                    title: "Quota (monetary)",
-                    default: 5000,
-                    maximum: 2000000000,
-                    minimum: 1
-                  },
-                  unitCost: {
-                    type: "string",
-                    title: "Unit cost (money per byte)",
-                    pattern: "^[0-9]+(\\.[0-9]+)?",
-                    default: "1"
-                  },
-                  // upConfidentiality: {
-                  //   type: "string",
-                  //   title: "Confidentiality of UP Security",
-                  //   enum: ["NOT_NEEDED", "PREFERRED", "REQUIRED"],
-                  // },
-                },
-                // "required": [
-                //   "upIntegrity",
-                //   "upConfidentiality"
-                // ]
-              }
-            ]
-          },
-        }
       },
       chargingData: {
         type: "object",
