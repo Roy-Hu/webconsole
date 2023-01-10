@@ -1550,19 +1550,24 @@ func parseCDR(supi string) (totalVol int64, ulVol int64, dlVol int64) {
 	newCdrFile.DecodingBytes(cdr)
 	logger.WebUILog.Warn("Decode CDR success")
 
-	recvByte := newCdrFile.CdrList[0].CdrByte
+	logger.WebUILog.Warn("Decode CDR success")
+	logger.WebUILog.Warn("newCdrFile.CdrList len: ", len(newCdrFile.CdrList))
 
-	val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
-	asn.UnmarshalWithParams(recvByte, val, "")
-
-	chargingRecord := *(val.(*cdrType.ChargingRecord))
-
-	for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
-		// fmt.Println("rating group id", multipleUnitUsage.RatingGroup.Value)
-		for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
-			totalVol += usedUnitContainer.DataTotalVolume.Value
-			ulVol += usedUnitContainer.DataVolumeUplink.Value
-			dlVol += usedUnitContainer.DataVolumeDownlink.Value
+	for _, cdr := range newCdrFile.CdrList {
+		recvByte := cdr.CdrByte
+	
+		val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
+		asn.UnmarshalWithParams(recvByte, val, "")
+	
+		chargingRecord := *(val.(*cdrType.ChargingRecord))
+	
+		for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
+			// fmt.Println("rating group id", multipleUnitUsage.RatingGroup.Value)
+			for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
+				totalVol += usedUnitContainer.DataTotalVolume.Value
+				ulVol += usedUnitContainer.DataVolumeUplink.Value
+				dlVol += usedUnitContainer.DataVolumeDownlink.Value
+			}
 		}
 	}
 
