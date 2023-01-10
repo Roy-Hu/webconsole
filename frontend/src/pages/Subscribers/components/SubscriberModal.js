@@ -477,13 +477,6 @@ class SubscriberModal extends Component {
         type: "object",
         title: "Charging",
         properties: {
-          ratingGroup: {
-            type: "integer",
-            title: "Rating Group (It should be greater than two.)",
-            default: 2,
-            maximum: 2000000000,
-            minimum: 2
-          },
           onlineChargingChk: {
             type: "boolean",
             title: "Online Charging",

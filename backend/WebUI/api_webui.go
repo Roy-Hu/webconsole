@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
 	"strconv"
@@ -1125,7 +1125,7 @@ func PutSubscriberByID(c *gin.Context) {
 	smPolicyDataBsonM["ueId"] = ueId
 
 	flowRulesBsonA := make([]interface{}, 0, len(subsData.FlowRules))
-	chargingBsonA := make([]interface{}, 0, len(subsData.FlowRules))
+	// chargingBsonA := make([]interface{}, 0, len(subsData.FlowRules))
 	for _, flowRule := range subsData.FlowRules {
 		flowRuleBsonM := toBsonM(flowRule)
 		flowRuleBsonM["ueId"] = ueId
@@ -1146,22 +1146,30 @@ func PutSubscriberByID(c *gin.Context) {
 			}
 			unitCost.Exponent = len(flowRule.ChargingData.UnitCost) - dotPos - 1
 		}
-
-		chargingBsonM := primitive.M{
-			"ueId":        ueId,
-			"ratingGroup": flowRule.ChargingData.RatingGroup,
-			"tarrif": tarrifType.CurrentTariff{
-				RateElement: &tarrifType.RateElement{
-					UnitCost: &unitCost,
-					CCUnitType: &tarrifType.CCUnitType{
-						Value: tarrifType.MONEY,
-					},
+		flowRuleBsonM["tarrif"] = tarrifType.CurrentTariff{
+			RateElement: &tarrifType.RateElement{
+				UnitCost: &unitCost,
+				CCUnitType: &tarrifType.CCUnitType{
+					Value: tarrifType.MONEY,
 				},
 			},
 		}
 
+		// chargingBsonM := primitive.M{
+		// 	"ueId":        ueId,
+		// 	"ratingGroup": flowRule.ChargingData.RatingGroup,
+		// 	"tarrif": tarrifType.CurrentTariff{
+		// 		RateElement: &tarrifType.RateElement{
+		// 			UnitCost: &unitCost,
+		// 			CCUnitType: &tarrifType.CCUnitType{
+		// 				Value: tarrifType.MONEY,
+		// 			},
+		// 		},
+		// 	},
+		// }
+
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
-		chargingBsonA = append(chargingBsonA, chargingBsonM)
+		// chargingBsonA = append(chargingBsonA, chargingBsonM)
 	}
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
@@ -1170,12 +1178,12 @@ func PutSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIPostMany(flowRuleDataColl, filter, flowRulesBsonA); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
-	if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
-		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-	}
-	if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, chargingBsonA); err != nil {
-		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-	}
+	// if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
+	// 	logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	// }
+	// if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, chargingBsonA); err != nil {
+	// 	logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	// }
 
 	// charging: for default flow
 	if subsData.ChargingData != nil && len(subsData.ChargingData) > 0 {
@@ -1350,7 +1358,7 @@ func DeleteSubscriberByID(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-// util function 
+// util function
 func getQuotaBySupi(supi string) uint32 {
 	filter := bson.M{"ueId": supi, "ratingGroup": 1}
 	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
