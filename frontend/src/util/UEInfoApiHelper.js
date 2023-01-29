@@ -66,7 +66,7 @@ class UeInfoApiHelper {
       if (response.status === 200 && response.data) {
         //To do: implement set rgistered ue action
 
-        console.log(response.data)
+        // console.log(response.data)
 
         let ue_context = response.data[0]
         store.dispatch(ueinfoActions.setUEInfoDetailAMF(ue_context));
