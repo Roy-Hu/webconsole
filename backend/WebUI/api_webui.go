@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
+
 	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
@@ -1538,29 +1539,19 @@ func GetUEPDUSessionInfo(c *gin.Context) {
 // Get vol from CDR
 func parseCDR(supi string) (totalVol int64, ulVol int64, dlVol int64) {
 	fileName := "/tmp/webconsole/" + supi + ".cdr"
-	cdr, err := os.ReadFile(fileName)
-	if err != nil {
-		logger.WebUILog.Warn("Fail to retrv file: ", fileName)
-		return 0, 0, 0
-	}
 
-	logger.WebUILog.Warn("Retr CDR success")
 	newCdrFile := cdrFile.CDRFile{}
 
-	newCdrFile.DecodingBytes(cdr)
-	logger.WebUILog.Warn("Decode CDR success")
-
-	logger.WebUILog.Warn("Decode CDR success")
-	logger.WebUILog.Warn("newCdrFile.CdrList len: ", len(newCdrFile.CdrList))
+	newCdrFile.Decoding(fileName)
 
 	for _, cdr := range newCdrFile.CdrList {
 		recvByte := cdr.CdrByte
-	
+
 		val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
 		asn.UnmarshalWithParams(recvByte, val, "")
-	
+
 		chargingRecord := *(val.(*cdrType.ChargingRecord))
-	
+
 		for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
 			// fmt.Println("rating group id", multipleUnitUsage.RatingGroup.Value)
 			for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
