@@ -198,12 +198,8 @@ class SubscriberModal extends Component {
             subscriber['AuthenticationSubscription']["opc"]["opcValue"],
           SQN: subscriber['AuthenticationSubscription']["sequenceNumber"],
           sliceConfigurations: sliceConfigurationsFromSubscriber(subscriber),
+          chargingData: subscriber["ChargingData"]
         };
-
-        if (subscriber["ChargingData"]) {
-          formData["chargingConfigurations"] = subscriber["ChargingData"]
-        }
-
         this.updateFormData(formData).then();
       }
     }
@@ -325,7 +321,13 @@ class SubscriberModal extends Component {
           }]))
       },
       "FlowRules": flowRulesFromSliceConfiguration(formData["sliceConfigurations"]),
-      "ChargingData": formData["chargingConfigurations"]
+      "ChargingData": 
+      {
+        "chargingMethod": formData["chargingData"]["chargingMethod"],
+        "quota": formData["chargingData"]["quota"],
+        "unitCost": formData["chargingData"]["unitCost"],
+        "default": true,
+      }
     };
 
     if(this.state.editMode) {

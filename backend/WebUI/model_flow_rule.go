@@ -10,7 +10,4 @@ type FlowRule struct {
 	GBRUL        string       `json:"gbrUL,omitempty" yaml:"gbrUL" bson:"gbrUL" mapstructure:"gbrUL"`
 	GBRDL        string       `json:"gbrDL,omitempty" yaml:"gbrDL" bson:"gbrDL" mapstructure:"gbrDL"`
 	ChargingData ChargingData `json:"charging,omitempty" yaml:"charging" bson:"charging" mapstructure:"charging"`
-	RatingGroup  int32        `json:"ratingGroup,omitempty" yaml:"ratingGroup" bson:"ratingGroup" mapstructure:"ratingGroup"`
-	Online       bool         `json:"onlineChargingChk" yaml:"Online" bson:"Online" mapstructure:"Online"`
-	Offline      bool         `json:"offlineChargingChk" yaml:"Offline" bson:"Offline" mapstructure:"Offline"`
 }

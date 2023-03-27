@@ -8,24 +8,21 @@ import RatinggroupQuotaModal from "./components/RatinggroupQuotaModal";
 import ApiHelper from "../../util/ApiHelper";
 
 class DetailButton extends Component {
-  handleClick = (cell)=>{
+  handleClick = (cell) => {
     UEInfoApiHelper.fetchUEInfoDetail(cell).then((result) => {
-      let success = result[0]
-      let smContextRef = result[1]
+      let success = result[0];
+      let smContextRef = result[1];
 
       if (success) {
-        UEInfoApiHelper.fetchUEInfoDetailSMF(smContextRef).then()
+        UEInfoApiHelper.fetchUEInfoDetailSMF(smContextRef).then();
       }
-    })    
-  }
+    });
+  };
 
   render() {
     const { cell } = this.props;
     return (
-      <Button
-        bsStyle="primary"
-        onClick={this.handleClick(cell)}
-      >
+      <Button bsStyle="primary" onClick={this.handleClick(cell)}>
         <Link to={`/ueinfo/${cell}`}>Show Info</Link>
       </Button>
     );
@@ -39,19 +36,19 @@ class UECharginRecord extends Component {
   };
 
   componentDidMount() {
-    UEInfoApiHelper.fetchUEWithCR().then()
+    UEInfoApiHelper.fetchUEWithCR().then();
 
     this.interval = setInterval(async () => {
-      await UEInfoApiHelper.fetchUEWithCR()
-    }, 1000)
+      await UEInfoApiHelper.fetchUEWithCR();
+    }, 1000);
   }
 
   componentWillUnmount() {
-    clearInterval(this.interval)
+    clearInterval(this.interval);
   }
 
   async openEditQuota(cell) {
-    const quota = await ApiHelper.fetchQuota(cell)
+    const quota = await ApiHelper.fetchQuota(cell);
 
     this.setState({
       quotaModalOpen: true,
@@ -60,32 +57,32 @@ class UECharginRecord extends Component {
   }
 
   async addQuota(subscriberData) {
-    this.setState({ subscriberModalOpen: false })
+    this.setState({ subscriberModalOpen: false });
 
     if (!(await ApiHelper.createSubscriber(subscriberData))) {
-      alert("Error creating new q when create user")
+      alert("Error creating new q when create user");
     }
-    ApiHelper.fetchQuota().then()
+    ApiHelper.fetchQuota().then();
   }
 
   async updateQuota(quotaData) {
-    this.setState({ quotaModalOpen: false })
+    this.setState({ quotaModalOpen: false });
 
-    let newquotaData = this.state.quotaModalData
-    newquotaData["quota"] = quotaData["quota"]
-    this.setState({ quotaModalData: newquotaData })
+    let newquotaData = this.state.quotaModalData;
+    newquotaData["quota"] = quotaData["quota"];
+    this.setState({ quotaModalData: newquotaData });
 
-    const result = await ApiHelper.updateQuota(newquotaData)
+    const result = await ApiHelper.updateQuota(newquotaData);
 
     if (!result) {
-      alert("Error updating quota: " + newquotaData["quota"])
+      alert("Error updating quota: " + newquotaData["quota"]);
     }
-    ApiHelper.fetchQuota(newquotaData["supi"]).then()
+    ApiHelper.fetchQuota(newquotaData["supi"]).then();
   }
 
   cellButton = (cell, row, _, rowIndex) => {
-    return <DetailButton cell={cell} row={row} rowIndex={rowIndex} />
-  }
+    return <DetailButton cell={cell} row={row} rowIndex={rowIndex} />;
+  };
 
   render() {
     return (
@@ -96,7 +93,7 @@ class UECharginRecord extends Component {
             <Button
               bsStyle={"primary"}
               className="subscribers__button"
-              onClick={()=>UEInfoApiHelper.fetchUEWithCR().then()}
+              onClick={() => UEInfoApiHelper.fetchUEWithCR().then()}
             >
               Refresh
             </Button>
@@ -108,9 +105,7 @@ class UECharginRecord extends Component {
                   data={this.props.users_cr}
                   striped={true}
                   hover={true}
-                  pagination={
-                    true
-                  } 
+                  pagination={true}
                 >
                   <TableHeaderColumn
                     dataField="supi"

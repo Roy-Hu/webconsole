@@ -49,7 +49,6 @@ const (
 )
 
 var httpsClient *http.Client
-var SupiRatingGroupIDMap map[string]uint32
 
 func init() {
 	httpsClient = &http.Client{
@@ -57,9 +56,6 @@ func init() {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
-
-	SupiRatingGroupIDMap = make(map[string]uint32)
-	SupiRatingGroupIDMap["imsi-208930000000003"] = 1
 }
 
 func mapToByte(data map[string]interface{}) (ret []byte) {
@@ -868,6 +864,7 @@ func GetSubscriberByID(c *gin.Context) {
 
 	filterUeIdOnly := bson.M{"ueId": ueId}
 	filter := bson.M{"ueId": ueId, "servingPlmnId": servingPlmnId}
+	filterCharging := bson.M{"ueId": ueId, "default": true}
 
 	authSubsDataInterface, err := mongoapi.RestfulAPIGetOne(authSubsDataColl, filterUeIdOnly)
 	if err != nil {
@@ -897,12 +894,10 @@ func GetSubscriberByID(c *gin.Context) {
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
-	filterCharging := bson.M{"ueId": ueId, "ratingGroup": 1}
-	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filterCharging)
+	chargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filterCharging)
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
-	logger.WebUILog.Warnln("chargingDataInterface", chargingDataInterface)
 
 	var authSubsData models.AuthenticationSubscription
 	json.Unmarshal(mapToByte(authSubsDataInterface), &authSubsData)
@@ -918,8 +913,8 @@ func GetSubscriberByID(c *gin.Context) {
 	json.Unmarshal(mapToByte(smPolicyDataInterface), &smPolicyData)
 	var flowRules []FlowRule
 	json.Unmarshal(sliceToByte(flowRuleDataInterface), &flowRules)
-	var chargingData []ChargingData
-	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
+	var chargingData ChargingData
+	json.Unmarshal(mapToByte(chargingDataInterface), &chargingData)
 
 	for key, SnssaiData := range smPolicyData.SmPolicySnssaiData {
 		tmpSmPolicyDnnData := make(map[string]models.SmPolicyDnnData)
@@ -981,6 +976,7 @@ func PostSubscriberByID(c *gin.Context) {
 
 	filterUeIdOnly := bson.M{"ueId": ueId}
 	filter := bson.M{"ueId": ueId, "servingPlmnId": servingPlmnId}
+	filterCharging := bson.M{"ueId": ueId, "default": true}
 
 	// Lookup same UE ID of other tenant's subscription.
 	if claims != nil {
@@ -1042,6 +1038,9 @@ func PostSubscriberByID(c *gin.Context) {
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
 	}
 
+	ChargingDataBsonM := toBsonM(subsData.ChargingData)
+	ChargingDataBsonM["ueId"] = ueId
+
 	if _, err := mongoapi.RestfulAPIPost(authSubsDataColl, filterUeIdOnly, authSubsBsonM); err != nil {
 		logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
 	}
@@ -1063,8 +1062,37 @@ func PostSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIPostMany(flowRuleDataColl, filter, flowRulesBsonA); err != nil {
 		logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
 	}
+	if _, err := mongoapi.RestfulAPIPost(chargingDataColl, filterCharging, ChargingDataBsonM); err != nil {
+		logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
+	}
 
 	c.JSON(http.StatusCreated, gin.H{})
+}
+
+func buildTaffif(unitCostStr string) tarrifType.CurrentTariff {
+	// unitCost
+	unitCost := tarrifType.UnitCost{}
+	dotPos := strings.Index(unitCostStr, ".")
+	if dotPos == -1 {
+		unitCost.Exponent = 0
+		if digit, err := strconv.Atoi(unitCostStr); err == nil {
+			unitCost.ValueDigits = int64(digit)
+		}
+	} else {
+		if digit, err := strconv.Atoi(strings.Replace(unitCostStr, ".", "", -1)); err == nil {
+			unitCost.ValueDigits = int64(digit)
+		}
+		unitCost.Exponent = len(unitCostStr) - dotPos - 1
+	}
+
+	return tarrifType.CurrentTariff{
+		RateElement: &tarrifType.RateElement{
+			UnitCost: &unitCost,
+			CCUnitType: &tarrifType.CCUnitType{
+				Value: tarrifType.MONEY,
+			},
+		},
+	}
 }
 
 // Put subscriber by IMSI(ueId) and PlmnID(servingPlmnId)
@@ -1126,51 +1154,28 @@ func PutSubscriberByID(c *gin.Context) {
 	smPolicyDataBsonM["ueId"] = ueId
 
 	flowRulesBsonA := make([]interface{}, 0, len(subsData.FlowRules))
-	// chargingBsonA := make([]interface{}, 0, len(subsData.FlowRules))
+	chargingBsonA := make([]interface{}, 0, len(subsData.FlowRules)+1)
+
+	chargingBsonM := toBsonM(subsData.ChargingData)
+	chargingBsonM["ueId"] = ueId
+	chargingBsonM["default"] = true
+	chargingBsonM["tarrif"] = buildTaffif(subsData.ChargingData.UnitCost)
+
+	chargingBsonA = append(chargingBsonA, chargingBsonM)
+
 	for _, flowRule := range subsData.FlowRules {
 		flowRuleBsonM := toBsonM(flowRule)
 		flowRuleBsonM["ueId"] = ueId
 		flowRuleBsonM["servingPlmnId"] = servingPlmnId
-		flowRuleBsonM["Online"] = flowRule.ChargingData.OnlineCharging
-		flowRuleBsonM["Offline"] = flowRule.ChargingData.OfflineCharging
-		// unitCost
-		unitCost := tarrifType.UnitCost{}
-		dotPos := strings.Index(flowRule.ChargingData.UnitCost, ".")
-		if dotPos == -1 {
-			unitCost.Exponent = 0
-			if digit, err := strconv.Atoi(flowRule.ChargingData.UnitCost); err == nil {
-				unitCost.ValueDigits = int64(digit)
-			}
-		} else {
-			if digit, err := strconv.Atoi(strings.Replace(flowRule.ChargingData.UnitCost, ".", "", -1)); err == nil {
-				unitCost.ValueDigits = int64(digit)
-			}
-			unitCost.Exponent = len(flowRule.ChargingData.UnitCost) - dotPos - 1
-		}
-		flowRuleBsonM["tarrif"] = tarrifType.CurrentTariff{
-			RateElement: &tarrifType.RateElement{
-				UnitCost: &unitCost,
-				CCUnitType: &tarrifType.CCUnitType{
-					Value: tarrifType.MONEY,
-				},
-			},
-		}
 
-		// chargingBsonM := primitive.M{
-		// 	"ueId":        ueId,
-		// 	"ratingGroup": flowRule.ChargingData.RatingGroup,
-		// 	"tarrif": tarrifType.CurrentTariff{
-		// 		RateElement: &tarrifType.RateElement{
-		// 			UnitCost: &unitCost,
-		// 			CCUnitType: &tarrifType.CCUnitType{
-		// 				Value: tarrifType.MONEY,
-		// 			},
-		// 		},
-		// 	},
-		// }
+		chgData := flowRule.ChargingData
+		chargingBsonM := toBsonM(chgData)
+		chargingBsonM["ueId"] = ueId
+		chargingBsonM["tarrif"] = buildTaffif(chgData.UnitCost)
+		chargingBsonM["ChgRef"] = flowRule.Dnn + flowRule.Snssai + flowRule.Filter
 
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
-		// chargingBsonA = append(chargingBsonA, chargingBsonM)
+		chargingBsonA = append(chargingBsonA, chargingBsonM)
 	}
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
@@ -1179,49 +1184,11 @@ func PutSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIPostMany(flowRuleDataColl, filter, flowRulesBsonA); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
-	// if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
-	// 	logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-	// }
-	// if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, chargingBsonA); err != nil {
-	// 	logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-	// }
-
-	// charging: for default flow
-	if subsData.ChargingData != nil && len(subsData.ChargingData) > 0 {
-		urr := subsData.ChargingData[0]
-		chargingBsonM := toBsonM(urr)
-
-		chargingBsonM["ueId"] = ueId
-		chargingBsonM["ratingGroup"] = 1
-
-		// unitCost
-		unitCost := tarrifType.UnitCost{}
-		dotPos := strings.Index(urr.UnitCost, ".")
-		if dotPos == -1 {
-			unitCost.Exponent = 0
-			if digit, err := strconv.Atoi(urr.UnitCost); err == nil {
-				unitCost.ValueDigits = int64(digit)
-			}
-		} else {
-			if digit, err := strconv.Atoi(strings.Replace(urr.UnitCost, ".", "", -1)); err == nil {
-				unitCost.ValueDigits = int64(digit)
-			}
-			unitCost.Exponent = len(urr.UnitCost) - dotPos - 1
-		}
-
-		chargingBsonM["tarrif"] = tarrifType.CurrentTariff{
-			RateElement: &tarrifType.RateElement{
-				UnitCost: &unitCost,
-				CCUnitType: &tarrifType.CCUnitType{
-					Value: tarrifType.MONEY,
-				},
-			},
-		}
-
-		filterDefault := bson.M{"ueId": ueId, "ratingGroup": 1}
-		if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterDefault, chargingBsonM); err != nil {
-			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-		}
+	if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
+		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	}
+	if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, chargingBsonA); err != nil {
+		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 
 	if _, err := mongoapi.RestfulAPIPutOne(authSubsDataColl, filterUeIdOnly, authSubsBsonM); err != nil {
@@ -1421,16 +1388,14 @@ func PutQuotaByID(c *gin.Context) {
 
 	if len(chargingData) > 0 {
 		chargingBsonM := toBsonM(chargingData[0])
-		if !chargingData[0].OnlineCharging {
-			chargingBsonM["ratingGroup"] = 1
-			chargingBsonM["onlineChargingChk"] = false
-			chargingBsonM["quota"] = uint32(0)
-			chargingBsonM["unitCost"] = ""
-		}
-		chargingBsonM["quota"] = uint32(quotaData.Quota)
-		chargingBsonM["ratingGroup"] = 1
 
-		logger.WebUILog.Warnln("chargingBsonM", chargingBsonM)
+		switch chargingData[0].ChargingMethod {
+		case "Online":
+			chargingBsonM["quota"] = uint32(quotaData.Quota)
+			chargingBsonM["ratingGroup"] = 1
+		case "Offline":
+			logger.WebUILog.Warnln("Recharge for offine charging flow")
+		}
 
 		if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterDefault, chargingBsonM); err != nil {
 			logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
