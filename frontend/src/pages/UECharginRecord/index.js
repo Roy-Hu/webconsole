@@ -4,8 +4,6 @@ import { Link, withRouter } from "react-router-dom";
 import { BootstrapTable, TableHeaderColumn } from "react-bootstrap-table";
 import { connect } from "react-redux";
 import UEInfoApiHelper from "../../util/UEInfoApiHelper";
-import RatinggroupQuotaModal from "./components/RatinggroupQuotaModal";
-import ApiHelper from "../../util/ApiHelper";
 
 class DetailButton extends Component {
   handleClick = (cell) => {
@@ -30,11 +28,6 @@ class DetailButton extends Component {
 }
 
 class UECharginRecord extends Component {
-  state = {
-    quotaModalOpen: false,
-    quotaModalData: null,
-  };
-
   componentDidMount() {
     UEInfoApiHelper.fetchUEWithCR().then();
 
@@ -45,39 +38,6 @@ class UECharginRecord extends Component {
 
   componentWillUnmount() {
     clearInterval(this.interval);
-  }
-
-  async openEditQuota(cell) {
-    const quota = await ApiHelper.fetchQuota(cell);
-
-    this.setState({
-      quotaModalOpen: true,
-      quotaModalData: quota,
-    });
-  }
-
-  async addQuota(subscriberData) {
-    this.setState({ subscriberModalOpen: false });
-
-    if (!(await ApiHelper.createSubscriber(subscriberData))) {
-      alert("Error creating new q when create user");
-    }
-    ApiHelper.fetchQuota().then();
-  }
-
-  async updateQuota(quotaData) {
-    this.setState({ quotaModalOpen: false });
-
-    let newquotaData = this.state.quotaModalData;
-    newquotaData["quota"] = quotaData["quota"];
-    this.setState({ quotaModalData: newquotaData });
-
-    const result = await ApiHelper.updateQuota(newquotaData);
-
-    if (!result) {
-      alert("Error updating quota: " + newquotaData["quota"]);
-    }
-    ApiHelper.fetchQuota(newquotaData["supi"]).then();
   }
 
   cellButton = (cell, row, _, rowIndex) => {
@@ -131,23 +91,6 @@ class UECharginRecord extends Component {
                     Details
                   </TableHeaderColumn>
                   <TableHeaderColumn
-                    dataField="supi"
-                    width="14%"
-                    dataFormat={(cell, row, rowIndex, formatExtraData) => {
-                      return (
-                        <Button
-                          bsStyle={"primary"}
-                          className="subscribers__button"
-                          onClick={this.openEditQuota.bind(this, cell)}
-                        >
-                          Modify RatinggroupQuota
-                        </Button>
-                      );
-                    }}
-                  >
-                    Modify quota
-                  </TableHeaderColumn>
-                  <TableHeaderColumn
                     dataField="quotaLeft"
                     width="13%"
                     dataSort={true}
@@ -182,15 +125,6 @@ class UECharginRecord extends Component {
               {this.props.get_ue_cr_err && <h2>{this.props.ue_cr_err_msg}</h2>}
             </div>
           </div>
-          <RatinggroupQuotaModal
-            open={this.state.quotaModalOpen}
-            setOpen={(val) => this.setState({ quotaModalOpen: val })}
-            quota={this.state.quotaModalData}
-            // quota={{quota: 7777, supi: 'imsi-208930000000003'}}
-
-            onModify={this.updateQuota.bind(this)}
-            onSubmit={this.addQuota.bind(this)}
-          />
         </div>
       </div>
     );

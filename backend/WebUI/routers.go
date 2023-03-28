@@ -213,18 +213,4 @@ var routes = Routes{
 		"/charging-record",
 		GetChargingRecord,
 	},
-
-	{
-		"GetQuotaByID",
-		http.MethodGet,
-		"/quota/:supi",
-		GetQuotaByID,
-	},
-
-	{
-		"PutQuotaByID",
-		http.MethodPut,
-		"/quota/:supi",
-		PutQuotaByID,
-	},
 }
