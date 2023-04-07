@@ -326,7 +326,7 @@ class SubscriberModal extends Component {
         "chargingMethod": formData["chargingData"]["chargingMethod"],
         "quota": formData["chargingData"]["quota"],
         "unitCost": formData["chargingData"]["unitCost"],
-        "default": true,
+        "chgRef": "default",
       }
     };
 

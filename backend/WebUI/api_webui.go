@@ -2,6 +2,8 @@ package WebUI
 
 import (
 	"crypto/tls"
+	"math"
+
 	// "encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -22,13 +24,11 @@ import (
 	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
-	"strconv"
-
 	"github.com/free5gc/CDRUtil/asn"
 	"github.com/free5gc/CDRUtil/cdrFile"
 	"github.com/free5gc/CDRUtil/cdrType"
-	"github.com/free5gc/TarrifUtil/tarrifType"
 	"github.com/free5gc/openapi/models"
+	"github.com/free5gc/util/idgenerator"
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/logger"
 	"github.com/free5gc/webconsole/backend/webui_context"
@@ -864,7 +864,7 @@ func GetSubscriberByID(c *gin.Context) {
 
 	filterUeIdOnly := bson.M{"ueId": ueId}
 	filter := bson.M{"ueId": ueId, "servingPlmnId": servingPlmnId}
-	filterCharging := bson.M{"ueId": ueId, "default": true}
+	filterCharging := bson.M{"ueId": ueId, "chgRef": "default"}
 
 	authSubsDataInterface, err := mongoapi.RestfulAPIGetOne(authSubsDataColl, filterUeIdOnly)
 	if err != nil {
@@ -1034,7 +1034,14 @@ func PostSubscriberByID(c *gin.Context) {
 
 	ChargingDataBsonM := toBsonM(subsData.ChargingData)
 	ChargingDataBsonM["ueId"] = ueId
-	ChargingDataBsonM["tarrif"] = buildTaffif(subsData.ChargingData.UnitCost)
+
+	webuiSelf := webui_context.WEBUI_Self()
+	webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId] = idgenerator.NewGenerator(1, math.MaxInt32)
+	rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
+	if err != nil {
+		logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
+	}
+	ChargingDataBsonM["ratingGroup"] = int32(rg)
 
 	for _, flowRule := range subsData.FlowRules {
 		flowRuleBsonM := toBsonM(flowRule)
@@ -1045,8 +1052,14 @@ func PostSubscriberByID(c *gin.Context) {
 		chgData := flowRule.ChargingData
 		ChargingDataBsonM := toBsonM(chgData)
 		ChargingDataBsonM["ueId"] = ueId
-		ChargingDataBsonM["tarrif"] = buildTaffif(chgData.UnitCost)
-		ChargingDataBsonM["ChgRef"] = flowRule.Dnn + flowRule.Snssai + flowRule.Filter
+		ChargingDataBsonM["chgRef"] = flowRule.Dnn + flowRule.Snssai + flowRule.Filter
+
+		rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
+		if err != nil {
+			logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
+		}
+		ChargingDataBsonM["ratingGroup"] = int32(rg)
+
 		ChargingDataBsonA = append(ChargingDataBsonA, ChargingDataBsonM)
 	}
 
@@ -1078,32 +1091,6 @@ func PostSubscriberByID(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{})
 }
 
-func buildTaffif(unitCostStr string) tarrifType.CurrentTariff {
-	// unitCost
-	unitCost := tarrifType.UnitCost{}
-	dotPos := strings.Index(unitCostStr, ".")
-	if dotPos == -1 {
-		unitCost.Exponent = 0
-		if digit, err := strconv.Atoi(unitCostStr); err == nil {
-			unitCost.ValueDigits = int64(digit)
-		}
-	} else {
-		if digit, err := strconv.Atoi(strings.Replace(unitCostStr, ".", "", -1)); err == nil {
-			unitCost.ValueDigits = int64(digit)
-		}
-		unitCost.Exponent = len(unitCostStr) - dotPos - 1
-	}
-
-	return tarrifType.CurrentTariff{
-		RateElement: &tarrifType.RateElement{
-			UnitCost: &unitCost,
-			CCUnitType: &tarrifType.CCUnitType{
-				Value: tarrifType.MONEY,
-			},
-		},
-	}
-}
-
 func sendRechargeNotification(ueId string, rg int32) {
 	logger.WebUILog.Infoln("Send Notification to CHF due to quota change")
 	webuiSelf := webui_context.WEBUI_Self()
@@ -1117,7 +1104,7 @@ func sendRechargeNotification(ueId string, rg int32) {
 	req.Header.Add("Content-Type", "application/json")
 
 	if _, err = http.DefaultClient.Do(req); err != nil {
-		logger.WebUILog.Errorf("PutQuotaByID err: %+v", err)
+		logger.WebUILog.Errorf("Send Charging Notification err: %+v", err)
 	}
 }
 
@@ -1140,7 +1127,7 @@ func PutSubscriberByID(c *gin.Context) {
 
 	filterUeIdOnly := bson.M{"ueId": ueId}
 	filter := bson.M{"ueId": ueId, "servingPlmnId": servingPlmnId}
-	filterCharging := bson.M{"ueId": ueId, "default": true}
+	filterCharging := bson.M{"ueId": ueId, "chgRef": "default"}
 
 	// get the existing charging document
 	existingChargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filterCharging)
@@ -1191,16 +1178,28 @@ func PutSubscriberByID(c *gin.Context) {
 
 	chargingBsonM := toBsonM(subsData.ChargingData)
 	chargingBsonM["ueId"] = ueId
-	chargingBsonM["tarrif"] = buildTaffif(subsData.ChargingData.UnitCost)
-	// rating group is set by pcf instead of the UI, need to update to DB
-	chargingBsonM["ratingGroup"] = existingChargingData.RatingGroup
+	chargingBsonM["chgRef"] = "default"
+	webuiSelf := webui_context.WEBUI_Self()
+
+	rg := existingChargingDataInterface["ratingGroup"]
+	if rg == nil {
+		if webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId] == nil {
+			webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId] = idgenerator.NewGenerator(1, math.MaxInt32)
+		}
+		rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
+		if err != nil {
+			logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
+		}
+		chargingBsonM["ratingGroup"] = int32(rg)
+	} else if existingChargingData.Quota != subsData.ChargingData.Quota {
+		sendRechargeNotification(ueId, rg.(int32))
+	}
+
 	if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterCharging, chargingBsonM); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 
-	if existingChargingData.Quota != subsData.ChargingData.Quota {
-		sendRechargeNotification(ueId, existingChargingData.RatingGroup)
-	}
+	// TODO: Only send notification when CHF is connected
 
 	flowRulesBsonA := make([]interface{}, 0, len(subsData.FlowRules))
 	for _, flowRule := range subsData.FlowRules {
@@ -1211,7 +1210,7 @@ func PutSubscriberByID(c *gin.Context) {
 
 		chgData := flowRule.ChargingData
 		chgRef := flowRule.Dnn + flowRule.Snssai + flowRule.Filter
-		filterCharging := bson.M{"ueId": ueId, "ChgRef": chgRef}
+		filterCharging := bson.M{"ueId": ueId, "chgRef": chgRef}
 
 		// get the existing charging document
 		existingFlowChargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filterCharging)
@@ -1224,16 +1223,25 @@ func PutSubscriberByID(c *gin.Context) {
 
 		chargingBsonM := toBsonM(chgData)
 		chargingBsonM["ueId"] = ueId
-		chargingBsonM["tarrif"] = buildTaffif(chgData.UnitCost)
-		// rating group is set by pcf instead of the UI, need to update to DB
-		chargingBsonM["ratingGroup"] = existingFlowChargingData.RatingGroup
+		chargingBsonM["chgRef"] = chgRef
+
 		if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterCharging, chargingBsonM); err != nil {
 			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 		}
 
-		if existingFlowChargingData.Quota != chgData.Quota {
-			sendRechargeNotification(ueId, existingFlowChargingData.RatingGroup)
+		rg := existingFlowChargingDataInterface["ratingGroup"]
+		if rg == nil {
+			rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
+			if err != nil {
+				logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
+			}
+			chargingBsonM["ratingGroup"] = int32(rg)
+		} else if existingFlowChargingData.Quota != chgData.Quota {
+			// TODO: Only send notification when CHF is connected
+			sendRechargeNotification(ueId, rg.(int32))
 		}
+
+		// TODO: Only send notification when CHF is connected
 	}
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
@@ -1378,20 +1386,16 @@ func DeleteSubscriberByID(c *gin.Context) {
 }
 
 // util function
-func getQuotaBySupi(supi string) uint32 {
-	filter := bson.M{"ueId": supi, "ratingGroup": 1}
-	chargingDataInterface, err := mongoapi.RestfulAPIGetMany(chargingDataColl, filter)
+func getQuotaBySupi(supi string) int32 {
+	filter := bson.M{"ueId": supi, "chgRef": "default"}
+	chargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filter)
 	if err != nil {
 		logger.WebUILog.Errorf("getQuotaBySupi err: %+v", err)
 	}
-	var chargingData []ChargingData
-	json.Unmarshal(sliceToByte(chargingDataInterface), &chargingData)
+	var chargingData ChargingData
+	json.Unmarshal(mapToByte(chargingDataInterface), &chargingData)
 
-	if len(chargingData) > 0 {
-		return uint32(chargingData[0].Quota)
-	} else {
-		return 0
-	}
+	return chargingData.Quota
 }
 
 func GetRegisteredUEContext(c *gin.Context) {

@@ -44,5 +44,4 @@ func FTPRetrv(c *ftp.ServerConn, fileName string) ([]byte, error) {
 	cdr, err1 := ioutil.ReadAll(r)
 
 	return cdr, err1
-
 }

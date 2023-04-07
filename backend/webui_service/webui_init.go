@@ -149,13 +149,12 @@ func (webui *WEBUI) Start() {
 
 	self := webui_context.WEBUI_Self()
 	self.UpdateNfProfiles()
-	self.FtpConn, _ = ftp.FTPLogin()
 
 	router.NoRoute(ReturnPublic())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	ftp.OpenServer(&wg)
+	self.BillingServer.FtpServer = ftp.OpenServer(&wg)
 	initLog.Infoln(router.Run(":5000"))
 }
 
