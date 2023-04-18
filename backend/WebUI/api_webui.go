@@ -2,7 +2,7 @@ package WebUI
 
 import (
 	"crypto/tls"
-	"math"
+	"strconv"
 
 	// "encoding/binary"
 	"encoding/json"
@@ -28,24 +28,22 @@ import (
 	"github.com/free5gc/CDRUtil/cdrFile"
 	"github.com/free5gc/CDRUtil/cdrType"
 	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/util/idgenerator"
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/logger"
 	"github.com/free5gc/webconsole/backend/webui_context"
 )
 
 const (
-	authSubsDataColl = "subscriptionData.authenticationData.authenticationSubscription"
-	amDataColl       = "subscriptionData.provisionedData.amData"
-	smDataColl       = "subscriptionData.provisionedData.smData"
-	smfSelDataColl   = "subscriptionData.provisionedData.smfSelectionSubscriptionData"
-	amPolicyDataColl = "policyData.ues.amData"
-	smPolicyDataColl = "policyData.ues.smData"
-	flowRuleDataColl = "policyData.ues.flowRule"
-	userDataColl     = "userData"
-	tenantDataColl   = "tenantData"
-	quotaDataColl    = "quotaData"
-	chargingDataColl = "chargingData"
+	authSubsDataColl  = "subscriptionData.authenticationData.authenticationSubscription"
+	amDataColl        = "subscriptionData.provisionedData.amData"
+	smDataColl        = "subscriptionData.provisionedData.smData"
+	smfSelDataColl    = "subscriptionData.provisionedData.smfSelectionSubscriptionData"
+	amPolicyDataColl  = "policyData.ues.amData"
+	smPolicyDataColl  = "policyData.ues.smData"
+	flowRuleDataColl  = "policyData.ues.flowRule"
+	userDataColl      = "userData"
+	tenantDataColl    = "tenantData"
+	chargingDatasColl = "chargingDatas"
 )
 
 var httpsClient *http.Client
@@ -864,7 +862,6 @@ func GetSubscriberByID(c *gin.Context) {
 
 	filterUeIdOnly := bson.M{"ueId": ueId}
 	filter := bson.M{"ueId": ueId, "servingPlmnId": servingPlmnId}
-	filterCharging := bson.M{"ueId": ueId, "chgRef": "default"}
 
 	authSubsDataInterface, err := mongoapi.RestfulAPIGetOne(authSubsDataColl, filterUeIdOnly)
 	if err != nil {
@@ -894,7 +891,7 @@ func GetSubscriberByID(c *gin.Context) {
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
-	chargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filterCharging)
+	chargingDatasInterface, err := mongoapi.RestfulAPIGetMany(chargingDatasColl, filterUeIdOnly)
 	if err != nil {
 		logger.WebUILog.Errorf("GetSubscriberByID err: %+v", err)
 	}
@@ -913,8 +910,8 @@ func GetSubscriberByID(c *gin.Context) {
 	json.Unmarshal(mapToByte(smPolicyDataInterface), &smPolicyData)
 	var flowRules []FlowRule
 	json.Unmarshal(sliceToByte(flowRuleDataInterface), &flowRules)
-	var chargingData ChargingData
-	json.Unmarshal(mapToByte(chargingDataInterface), &chargingData)
+	var chargingDatas []ChargingData
+	json.Unmarshal(sliceToByte(chargingDatasInterface), &chargingDatas)
 
 	for key, SnssaiData := range smPolicyData.SmPolicySnssaiData {
 		tmpSmPolicyDnnData := make(map[string]models.SmPolicyDnnData)
@@ -936,7 +933,7 @@ func GetSubscriberByID(c *gin.Context) {
 		AmPolicyData:                      amPolicyData,
 		SmPolicyData:                      smPolicyData,
 		FlowRules:                         flowRules,
-		ChargingData:                      chargingData,
+		ChargingDatas:                     chargingDatas,
 	}
 
 	c.JSON(http.StatusOK, subsData)
@@ -1030,37 +1027,19 @@ func PostSubscriberByID(c *gin.Context) {
 	smPolicyDataBsonM["ueId"] = ueId
 
 	flowRulesBsonA := make([]interface{}, 0, len(subsData.FlowRules))
-	ChargingDataBsonA := make([]interface{}, 0, len(subsData.FlowRules))
-
-	ChargingDataBsonM := toBsonM(subsData.ChargingData)
-	ChargingDataBsonM["ueId"] = ueId
-
-	webuiSelf := webui_context.WEBUI_Self()
-	webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId] = idgenerator.NewGenerator(1, math.MaxInt32)
-	rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
-	if err != nil {
-		logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
-	}
-	ChargingDataBsonM["ratingGroup"] = int32(rg)
+	ChargingDatasBsonA := make([]interface{}, 0, len(subsData.ChargingDatas))
 
 	for _, flowRule := range subsData.FlowRules {
 		flowRuleBsonM := toBsonM(flowRule)
 		flowRuleBsonM["ueId"] = ueId
 		flowRuleBsonM["servingPlmnId"] = servingPlmnId
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
+	}
 
-		chgData := flowRule.ChargingData
-		ChargingDataBsonM := toBsonM(chgData)
-		ChargingDataBsonM["ueId"] = ueId
-		ChargingDataBsonM["chgRef"] = flowRule.Dnn + flowRule.Snssai + flowRule.Filter
-
-		rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
-		if err != nil {
-			logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
-		}
-		ChargingDataBsonM["ratingGroup"] = int32(rg)
-
-		ChargingDataBsonA = append(ChargingDataBsonA, ChargingDataBsonM)
+	for _, chgData := range subsData.ChargingDatas {
+		chgDataBsonM := toBsonM(chgData)
+		chgDataBsonM["ueId"] = ueId
+		ChargingDatasBsonA = append(ChargingDatasBsonA, chgDataBsonM)
 	}
 
 	if _, err := mongoapi.RestfulAPIPost(authSubsDataColl, filterUeIdOnly, authSubsBsonM); err != nil {
@@ -1084,8 +1063,8 @@ func PostSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIPostMany(flowRuleDataColl, filter, flowRulesBsonA); err != nil {
 		logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
 	}
-	if err := mongoapi.RestfulAPIPostMany(chargingDataColl, filterUeIdOnly, ChargingDataBsonA); err != nil {
-		logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
+	if err := mongoapi.RestfulAPIPostMany(chargingDatasColl, filterUeIdOnly, ChargingDatasBsonA); err != nil {
+		logger.WebUILog.Errorf("PostSubscriberByID1 err: %+v", err)
 	}
 
 	c.JSON(http.StatusCreated, gin.H{})
@@ -1127,16 +1106,6 @@ func PutSubscriberByID(c *gin.Context) {
 
 	filterUeIdOnly := bson.M{"ueId": ueId}
 	filter := bson.M{"ueId": ueId, "servingPlmnId": servingPlmnId}
-	filterCharging := bson.M{"ueId": ueId, "chgRef": "default"}
-
-	// get the existing charging document
-	existingChargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filterCharging)
-	if err != nil {
-		logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
-	}
-
-	var existingChargingData ChargingData
-	json.Unmarshal(mapToByte(existingChargingDataInterface), &existingChargingData)
 
 	authSubsBsonM := toBsonM(subsData.AuthenticationSubscription)
 	authSubsBsonM["ueId"] = ueId
@@ -1176,78 +1145,51 @@ func PutSubscriberByID(c *gin.Context) {
 	smPolicyDataBsonM := toBsonM(subsData.SmPolicyData)
 	smPolicyDataBsonM["ueId"] = ueId
 
-	chargingBsonM := toBsonM(subsData.ChargingData)
-	chargingBsonM["ueId"] = ueId
-	chargingBsonM["chgRef"] = "default"
-	webuiSelf := webui_context.WEBUI_Self()
-
-	rg := existingChargingDataInterface["ratingGroup"]
-	if rg == nil {
-		if webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId] == nil {
-			webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId] = idgenerator.NewGenerator(1, math.MaxInt32)
-		}
-		rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
-		if err != nil {
-			logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
-		}
-		chargingBsonM["ratingGroup"] = int32(rg)
-	} else if existingChargingData.Quota != subsData.ChargingData.Quota {
-		sendRechargeNotification(ueId, rg.(int32))
-	}
-
-	if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterCharging, chargingBsonM); err != nil {
-		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-	}
-
-	// TODO: Only send notification when CHF is connected
-
 	flowRulesBsonA := make([]interface{}, 0, len(subsData.FlowRules))
 	for _, flowRule := range subsData.FlowRules {
 		flowRuleBsonM := toBsonM(flowRule)
 		flowRuleBsonM["ueId"] = ueId
 		flowRuleBsonM["servingPlmnId"] = servingPlmnId
 		flowRulesBsonA = append(flowRulesBsonA, flowRuleBsonM)
+	}
 
-		chgData := flowRule.ChargingData
-		chgRef := flowRule.Dnn + flowRule.Snssai + flowRule.Filter
-		filterCharging := bson.M{"ueId": ueId, "chgRef": chgRef}
+	ChargingDatasBsonA := make([]interface{}, 0, len(subsData.ChargingDatas))
+	for _, chgData := range subsData.ChargingDatas {
+		var previousChargingData ChargingData
 
-		// get the existing charging document
-		existingFlowChargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filterCharging)
+		chgDataBsonM := toBsonM(chgData)
+		chgDataBsonM["ueId"] = ueId
+		ChargingDatasBsonA = append(ChargingDatasBsonA, chgDataBsonM)
+
+		filterFlowCharging := bson.M{"ueId": ueId, "chgRef": chgData.ChgRef}
+		previousChargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDatasColl, filterFlowCharging)
 		if err != nil {
 			logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
 		}
+		json.Unmarshal(mapToByte(previousChargingDataInterface), &previousChargingData)
 
-		var existingFlowChargingData ChargingData
-		json.Unmarshal(mapToByte(existingFlowChargingDataInterface), &existingFlowChargingData)
+		ratingGroup := previousChargingDataInterface["ratingGroup"]
+		if ratingGroup != nil {
+			rg := ratingGroup.(int32)
+			chgDataBsonM["ratingGroup"] = rg
 
-		chargingBsonM := toBsonM(chgData)
-		chargingBsonM["ueId"] = ueId
-		chargingBsonM["chgRef"] = chgRef
-
-		if _, err := mongoapi.RestfulAPIPutOne(chargingDataColl, filterCharging, chargingBsonM); err != nil {
-			logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
-		}
-
-		rg := existingFlowChargingDataInterface["ratingGroup"]
-		if rg == nil {
-			rg, err := webuiSelf.BillingServer.UeRatingGroupIDGenerator[ueId].Allocate()
-			if err != nil {
-				logger.WebUILog.Errorf("Fail to allocate rating group for UE[%s]: %+v", ueId, err)
+			if previousChargingData.Quota != chgData.Quota {
+				sendRechargeNotification(ueId, rg)
 			}
-			chargingBsonM["ratingGroup"] = int32(rg)
-		} else if existingFlowChargingData.Quota != chgData.Quota {
-			// TODO: Only send notification when CHF is connected
-			sendRechargeNotification(ueId, rg.(int32))
 		}
-
-		// TODO: Only send notification when CHF is connected
 	}
+
 	// Replace all data with new one
 	if err := mongoapi.RestfulAPIDeleteMany(flowRuleDataColl, filter); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 	if err := mongoapi.RestfulAPIPostMany(flowRuleDataColl, filter, flowRulesBsonA); err != nil {
+		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	}
+	if err := mongoapi.RestfulAPIDeleteMany(chargingDatasColl, filterUeIdOnly); err != nil {
+		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
+	}
+	if err := mongoapi.RestfulAPIPostMany(chargingDatasColl, filterUeIdOnly, ChargingDatasBsonA); err != nil {
 		logger.WebUILog.Errorf("PutSubscriberByID err: %+v", err)
 	}
 	if _, err := mongoapi.RestfulAPIPutOne(authSubsDataColl, filterUeIdOnly, authSubsBsonM); err != nil {
@@ -1378,7 +1320,7 @@ func DeleteSubscriberByID(c *gin.Context) {
 	if err := mongoapi.RestfulAPIDeleteOne(smPolicyDataColl, filterUeIdOnly); err != nil {
 		logger.WebUILog.Errorf("DeleteSubscriberByID err: %+v", err)
 	}
-	if err := mongoapi.RestfulAPIDeleteMany(chargingDataColl, filterUeIdOnly); err != nil {
+	if err := mongoapi.RestfulAPIDeleteMany(chargingDatasColl, filterUeIdOnly); err != nil {
 		logger.WebUILog.Errorf("DeleteSubscriberByID err: %+v", err)
 	}
 
@@ -1386,16 +1328,17 @@ func DeleteSubscriberByID(c *gin.Context) {
 }
 
 // util function
-func getQuotaBySupi(supi string) int32 {
-	filter := bson.M{"ueId": supi, "chgRef": "default"}
-	chargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDataColl, filter)
+func getQuotaByRatingGroup(supi string, rg int64) int64 {
+	filter := bson.M{"ueId": supi, "ratingGroup": rg}
+	chargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDatasColl, filter)
 	if err != nil {
-		logger.WebUILog.Errorf("getQuotaBySupi err: %+v", err)
+		logger.WebUILog.Errorf("getQuotaByRatingGroup err: %+v", err)
 	}
 	var chargingData ChargingData
 	json.Unmarshal(mapToByte(chargingDataInterface), &chargingData)
 
-	return chargingData.Quota
+	quota, _ := strconv.ParseInt(chargingData.Quota, 10, 64)
+	return quota
 }
 
 func GetRegisteredUEContext(c *gin.Context) {
@@ -1479,33 +1422,44 @@ func GetUEPDUSessionInfo(c *gin.Context) {
 	}
 }
 
+type RatingGroupDataUsage struct {
+	TotalVol int64
+	UlVol    int64
+	DlVol    int64
+}
+
 // Get vol from CDR
-func parseCDR(supi string) (totalVol int64, ulVol int64, dlVol int64) {
+func parseCDR(supi string) map[int64]RatingGroupDataUsage {
 	fileName := "/tmp/webconsole/" + supi + ".cdr"
 
 	newCdrFile := cdrFile.CDRFile{}
 
 	newCdrFile.Decoding(fileName)
+	dataUsage := make(map[int64]RatingGroupDataUsage)
 
 	for _, cdr := range newCdrFile.CdrList {
 		recvByte := cdr.CdrByte
-
 		val := reflect.New(reflect.TypeOf(&cdrType.ChargingRecord{}).Elem()).Interface()
 		asn.UnmarshalWithParams(recvByte, val, "")
 
 		chargingRecord := *(val.(*cdrType.ChargingRecord))
 
 		for _, multipleUnitUsage := range chargingRecord.ListOfMultipleUnitUsage {
-			// fmt.Println("rating group id", multipleUnitUsage.RatingGroup.Value)
+			rg := multipleUnitUsage.RatingGroup.Value
+			// filterFlowCharging := bson.M{"ueId": ueId, "rg": rg}
+			du := dataUsage[rg]
+
 			for _, usedUnitContainer := range multipleUnitUsage.UsedUnitContainers {
-				totalVol += usedUnitContainer.DataTotalVolume.Value
-				ulVol += usedUnitContainer.DataVolumeUplink.Value
-				dlVol += usedUnitContainer.DataVolumeDownlink.Value
+				du.TotalVol += usedUnitContainer.DataTotalVolume.Value
+				du.UlVol += usedUnitContainer.DataVolumeUplink.Value
+				du.DlVol += usedUnitContainer.DataVolumeDownlink.Value
 			}
+
+			dataUsage[rg] = du
 		}
 	}
 
-	return totalVol, ulVol, dlVol
+	return dataUsage
 }
 
 func GetChargingRecord(c *gin.Context) {
@@ -1546,16 +1500,36 @@ func GetChargingRecord(c *gin.Context) {
 	for _, ueData := range uesBsonA {
 		ueBsonM := toBsonM(ueData)
 		supi := ueBsonM["Supi"].(string)
-		totalVol, ulVol, dlVol := parseCDR(supi)
+		ratingGroupDataUsage := parseCDR(supi)
 
-		chargingRecordsBsonA = append(chargingRecordsBsonA, bson.M{
-			"Supi":               supi,
-			"CmState":            ueBsonM["CmState"].(string),
-			"DataTotalVolume":    totalVol,
-			"DataVolumeUplink":   ulVol,
-			"DataVolumeDownlink": dlVol,
-			"quotaLeft":          int32(getQuotaBySupi(supi)),
-		})
+		for rg, du := range ratingGroupDataUsage {
+			var flowFilter string
+
+			filter := bson.M{"ueId": supi, "ratingGroup": rg}
+
+			chargingDataInterface, err := mongoapi.RestfulAPIGetOne(chargingDatasColl, filter)
+			if err != nil {
+				logger.WebUILog.Errorf("PostSubscriberByID err: %+v", err)
+			}
+
+			// Reuse the chgRef = snassi + "_" + dnn + "_" + filter to find filter
+			// or maybe add a filter item in the DB?
+			chgRef := strings.Split(chargingDataInterface["chgRef"].(string), "_")
+			if len(chgRef) > 1 {
+				flowFilter = chgRef[2]
+			} else {
+				flowFilter = supi
+			}
+
+			chargingRecordsBsonA = append(chargingRecordsBsonA, bson.M{
+				"Supi":               flowFilter,
+				"CmState":            ueBsonM["CmState"].(string),
+				"DataTotalVolume":    du.TotalVol,
+				"DataVolumeUplink":   du.UlVol,
+				"DataVolumeDownlink": du.DlVol,
+				"quotaLeft":          getQuotaByRatingGroup(supi, rg),
+			})
+		}
 	}
 
 	c.JSON(http.StatusOK, chargingRecordsBsonA)

@@ -75,6 +75,24 @@ function smDatasFromSliceConfiguration(sliceConfiguration) {
   })
 }
 
+function chgDatasFromSliceConfiguration(sliceConfigurations) {
+  var chgDatas = []
+  sliceConfigurations.forEach(slice => {
+    slice.dnnConfigurations.forEach(dnn => {
+      chgDatas.push(Object.assign({ chgRef: snssaiToString(slice.snssai)}, slice.chargingData))
+
+      if (dnn.flowRules !== undefined) {
+        dnn.flowRules.forEach(flowRule => {
+          // extract the flow rule and charging data 
+          chgDatas.push(Object.assign({ chgRef: snssaiToString(slice.snssai) + "_" + dnn.dnn + "_" + flowRule.filter}, flowRule.chargingData))
+        })
+      }
+    })
+  })
+  // return flowRules
+  return chgDatas
+}
+
 function flowRulesFromSliceConfiguration(sliceConfigurations) {
   var flowRules = []
   sliceConfigurations.forEach(slice => {
@@ -91,21 +109,26 @@ function flowRulesFromSliceConfiguration(sliceConfigurations) {
 
 function sliceConfigurationsFromSubscriber(subscriber) {
   const defaultSingleNssais = subscriber["AccessAndMobilitySubscriptionData"]["nssai"]["defaultSingleNssais"] ? subscriber["AccessAndMobilitySubscriptionData"]["nssai"]["defaultSingleNssais"].map(nssai => {
+    const defaultChargingData = subscriber["ChgDatas"].find(data => data.chgRef === snssaiToString(nssai));
+
     return {
       snssai: {
         sst: nssai.sst,
         sd: nssai.sd,
         isDefault: true
-      }
+      },
+      chargingData: defaultChargingData
     }
   }) : [];
   const singleNssais = subscriber["AccessAndMobilitySubscriptionData"]["nssai"]["singleNssais"] ? subscriber["AccessAndMobilitySubscriptionData"]["nssai"]["singleNssais"].map(nssai => {
+    const chargingData = subscriber["ChgDatas"].find(data => data.chgRef === snssaiToString(nssai));
     return {
       snssai: {
         sst: nssai.sst,
         sd: nssai.sd,
         isDefault: false
-      }
+      },
+      chargingData: chargingData
     }
   }) : [];
 
@@ -125,6 +148,7 @@ function sliceConfigurationsFromSubscriber(subscriber) {
         flowRules = flowRulesData
         .filter(rule => rule.snssai === snssaiToString(sliceConf.snssai) && dnn === rule.dnn)
         .map(rule => {
+          const chargingData = subscriber["ChgDatas"].find(data => data.chgRef === (rule.snssai + "_" + dnn + "_" + rule.filter));
           return {
             filter: rule.filter,
             "5qi": rule["5qi"],
@@ -132,7 +156,7 @@ function sliceConfigurationsFromSubscriber(subscriber) {
             gbrDL: rule.gbrDL,
             mbrUL: rule.mbrUL,
             mbrDL: rule.mbrDL,
-            charging: rule.charging
+            chargingData: chargingData
           }
         })
       }
@@ -198,7 +222,6 @@ class SubscriberModal extends Component {
             subscriber['AuthenticationSubscription']["opc"]["opcValue"],
           SQN: subscriber['AuthenticationSubscription']["sequenceNumber"],
           sliceConfigurations: sliceConfigurationsFromSubscriber(subscriber),
-          chargingData: subscriber["ChargingData"]
         };
         this.updateFormData(formData).then();
       }
@@ -244,6 +267,8 @@ class SubscriberModal extends Component {
     const OP = formData["OPOPcSelect"] === "OP" ? formData["OPOPc"] : "";
     const OPc = formData["OPOPcSelect"] === "OPc" ? formData["OPOPc"] : "";
 
+    let chgDatas = chgDatasFromSliceConfiguration(formData["sliceConfigurations"])
+    
     let subscriberData = {
       "userNumber": formData["userNumber"],
       "plmnID": formData["plmnID"], // Change required
@@ -321,13 +346,7 @@ class SubscriberModal extends Component {
           }]))
       },
       "FlowRules": flowRulesFromSliceConfiguration(formData["sliceConfigurations"]),
-      "ChargingData": 
-      {
-        "chargingMethod": formData["chargingData"]["chargingMethod"],
-        "quota": formData["chargingData"]["quota"],
-        "unitCost": formData["chargingData"]["unitCost"],
-        "chgRef": "default",
-      }
+      "ChgDatas": chgDatas
     };
 
     if(this.state.editMode) {

@@ -17,7 +17,6 @@ let subModalSchema = {
     "OPOPcSelect",
     "OPOPc",
     "SQN",
-    "chargingData",
   ],
   properties: {
     userNumber: {
@@ -68,10 +67,6 @@ let subModalSchema = {
       title: "SQN",
       pattern: "^[A-Fa-f0-9]{1,12}$",
       default: "16f3b3f70fc2",
-    },
-    chargingData: {
-      title: "Charging Config",
-      $ref: "#/definitions/chargingData",
     },
     sliceConfigurations: {
       type: "array",
@@ -156,6 +151,10 @@ let subModalSchema = {
           type: "array",
           title: "DNN Configurations",
           items: { $ref: "#/definitions/DnnConfiguration" },
+        },
+        chargingData: {
+          title: "Charging Config",
+          $ref: "#/definitions/chargingData",
         },
       },
     },
@@ -256,7 +255,7 @@ let subModalSchema = {
           $ref: "#/definitions/bitRate",
           title: "Downlink MBR",
         },
-        charging: {
+        chargingData: {
           $ref: "#/definitions/chargingData",
           title: "Charging Config",
         },
@@ -273,7 +272,6 @@ let subModalSchema = {
       type: "object",
       required: ["chargingMethod"],
       properties: {
-        // TODO: Add default charging method will cause error: "".chargingData should be object" while submit
         chargingMethod: {
           type: "string",
           title: "Charging Method",
@@ -296,11 +294,10 @@ let subModalSchema = {
                   default: "1",
                 },
                 quota: {
-                  type: "integer",
+                  type: "string",
                   title: "Quota (monetary)",
-                  default: 5000,
-                  maximum: 2000000000,
-                  minimum: 1,
+                  pattern: "^[0-9]",
+                  default: "10000",
                 },
               },
             },

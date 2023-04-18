@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/util/idgenerator"
 	timedecode "github.com/free5gc/util/mapstruct"
 	"github.com/free5gc/util/mongoapi"
 	"github.com/free5gc/webconsole/backend/ftp"
@@ -20,8 +19,7 @@ type WEBUIContext struct {
 }
 
 type BillingServer struct {
-	FtpServer                *ftp.FTPServer
-	UeRatingGroupIDGenerator map[string]*idgenerator.IDGenerator
+	FtpServer *ftp.FTPServer
 }
 
 type NfOamInstance struct {
@@ -31,7 +29,6 @@ type NfOamInstance struct {
 }
 
 func init() {
-	webuiContext.BillingServer.UeRatingGroupIDGenerator = make(map[string]*idgenerator.IDGenerator)
 }
 
 func (context *WEBUIContext) UpdateNfProfiles() {
